@@ -6,6 +6,7 @@
 """
 
 import argparse
+import os
 import platform
 import shutil
 import sys
@@ -69,9 +70,23 @@ def build_argument_parser():
 		prog="hardsub",
 		description="Encode video with hardsubs"
 	)
-	ap.add_argument("<source_dir>", help="Directory that contains video files to hardsub. This directory also had to hold srt files with the same name of video file")
+	ap.add_argument("source_dir", help="Directory that contains video files to hardsub. This directory also had to hold srt files with the same name of video file")
 	ap.add_argument("-o", "--output", required=True, help="States the output directory for hardsubbed video.", metavar="<output_dir>")
 	return ap
+
+def check_arguments(args):
+	"""
+		Check if passed arguments are coherent to the script
+		:param args: arguments to check
+		:type args: dict
+		:returns: (boolean, tuple) -- True if the parameters are correct, False otherwhise. If parameters are not correct, tuple contains error messages 
+	"""
+	errors = []
+	if not os.path.isdir(args['output']):
+		errors.append( colorama.Style.BRIGHT + "output directory" +  colorama.Style.NORMAL + " is not a valid directory");
+	if not os.path.isdir(args['source_dir']):
+		errors.append( colorama.Style.BRIGHT + "source directory" +  colorama.Style.NORMAL + " is not a valid directory");
+	return (len(errors) == 0, errors)
 
 if __name__ == "__main__":
 	colorama.init()
@@ -89,4 +104,11 @@ if __name__ == "__main__":
 		sys.exit(2)
 	# Check for script parameters
 	ap = build_argument_parser()
-	ap.parse_args(sys.argv[1:])
+	arguments = ap.parse_args(sys.argv[1:])
+	parameter_checks, param_errors = check_arguments(vars(arguments))
+	if not parameter_checks:
+		print ( "Some parameters are inconsistent:")
+		for pe in param_errors:
+			print ("\t- {}".format(pe) );
+		sys.exit(3)
+	
