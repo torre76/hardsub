@@ -1,0 +1,4 @@
+*.py~
+bin
+include
+lib
