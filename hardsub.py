@@ -8,10 +8,10 @@
 import argparse
 import os
 import platform
-import shutil
 import sys
 
 import colorama
+import magic
 
 __author__ = "Gian Luca Dalla Torre"
 __copyright__ = "Copyright 2013, Gian Luca Dalla Torre"
@@ -33,6 +33,46 @@ REQUIRED_EXECUTABLES = (
 	'MP4Box'
 	
 )
+
+# List of magic signatures for video files
+ALLOWED_MAGIC = [
+]
+
+def which(name, flags=os.X_OK):
+	    """Search PATH for executable files with the given name.
+	   
+	    On newer versions of MS-Windows, the PATHEXT environment variable will be
+	    set to the list of file extensions for files considered executable. This
+	    will normally include things like ".EXE". This fuction will also find files
+	    with the given name ending with any of these extensions.
+	
+	    On MS-Windows the only flag that has any meaning is os.F_OK. Any other
+	    flags will be ignored.
+	   
+	    @type name: C{str}
+	    @param name: The name for which to search.
+	   
+	    @type flags: C{int}
+	    @param flags: Arguments to L{os.access}.
+	   
+	    @rtype: C{list}
+	    @param: A list of the full paths to files found, in the
+	    order in which they were found.
+	    """
+	    result = []
+	    exts = filter(None, os.environ.get('PATHEXT', '').split(os.pathsep))
+	    path = os.environ.get('PATH', None)
+	    if path is None:
+	        return []
+	    for p in os.environ.get('PATH', '').split(os.pathsep):
+	        p = os.path.join(p, name)
+	        if os.access(p, flags):
+	            result.append(p)
+	        for e in exts:
+	            pext = p + e
+	            if os.access(pext, flags):
+	                result.append(pext)
+	    return result
 
 def header():
 	"""
@@ -57,7 +97,7 @@ def check_prerequisites():
 	"""
 	missing_executables = []
 	for executable in REQUIRED_EXECUTABLES:
-		if shutil.which(executable) is None:
+		if len(which(executable)) == 0:
 			missing_executables.append(executable)
 	return (len(missing_executables) == 0, tuple(missing_executables))
 
@@ -88,6 +128,18 @@ def check_arguments(args):
 		errors.append( colorama.Style.BRIGHT + "source directory" +  colorama.Style.NORMAL + " is not a valid directory");
 	return (len(errors) == 0, errors)
 
+def find_candidates(directory):
+	"""
+		Find all video container file that have an srt associated for hardsubbing
+		:param directory: Directory where to find candidates
+		:type directory: str
+		:returns: list -- list of file that hat to be hardsubbed
+	"""
+	for f in os.listdir(directory):
+		print (directory + os.sep + f)
+		if os.path.isfile(directory + os.sep + f):
+			print(magic.from_file(directory + os.sep + f))
+
 if __name__ == "__main__":
 	colorama.init()
 	header()
@@ -111,4 +163,5 @@ if __name__ == "__main__":
 		for pe in param_errors:
 			print ("\t- {}".format(pe) );
 		sys.exit(3)
-	
+	# Get Files to hardsub
+	files_to_hardsub = find_candidates(arguments.source_dir)	
