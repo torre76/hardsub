@@ -8,10 +8,14 @@
 import argparse
 import os
 import platform
+import re
+import subprocess
 import sys
 
 import colorama
 import magic
+import pexpect
+import progressbar
 
 __author__ = "Gian Luca Dalla Torre"
 __copyright__ = "Copyright 2013, Gian Luca Dalla Torre"
@@ -35,7 +39,10 @@ REQUIRED_EXECUTABLES = (
 )
 
 # List of magic signatures for video files
-ALLOWED_MAGIC = [
+ALLOWED_MAGIC_SIG = [
+	'AVI',
+	'MPEG v4',
+	'Matroska'
 ]
 
 def which(name, flags=os.X_OK):
@@ -112,6 +119,7 @@ def build_argument_parser():
 	)
 	ap.add_argument("source_dir", help="Directory that contains video files to hardsub. This directory also had to hold srt files with the same name of video file")
 	ap.add_argument("-o", "--output", required=True, help="States the output directory for hardsubbed video.", metavar="<output_dir>")
+	ap.add_argument("-s", "--subtitle-scale", default=5, help="Set the font scale (between 1 and 100)", metavar="<subtitle_scale>")
 	return ap
 
 def check_arguments(args):
@@ -135,10 +143,86 @@ def find_candidates(directory):
 		:type directory: str
 		:returns: list -- list of file that hat to be hardsubbed
 	"""
+	candidates = []
 	for f in os.listdir(directory):
-		print (directory + os.sep + f)
 		if os.path.isfile(directory + os.sep + f):
-			print(magic.from_file(directory + os.sep + f))
+			for m in ALLOWED_MAGIC_SIG:
+				if m in magic.from_file(directory + os.sep + f):
+					candidates.append(directory + os.sep + f)
+	# Check if there is a srt companion file, if not, remove element from candidates
+	final_candidates = []
+	for f in candidates:
+		sub_file = os.path.splitext(f)[0] + ".srt"
+		if os.path.isfile(sub_file):
+			final_candidates.append(f)
+	return final_candidates
+
+def launch_process_with_progress_bar(command, progress_reg_exp, progress_bar_message="Working"):
+	"""
+		Launch a process and show a progress bar with auto calculated ETA.
+		:param command: Command to launch
+		:type command: str
+		:param progress_reg_exp: Regular Expression used to get process update percentage. It is applied on standard output
+		:type progress_reg_exp: str
+		:param progress_bar_message: Message shown on progress bar
+		:type progress_bar_message: str
+	"""
+	thread = pexpect.spawn(command)
+	pl = thread.compile_pattern_list([
+		pexpect.EOF,
+		progress_reg_exp
+		])
+	widgets = [progress_bar_message, progressbar.Percentage(), ' ', progressbar.Bar(),
+               ' ', progressbar.AdaptiveETA(), ' ']
+	pbar = progressbar.ProgressBar(widgets=widgets, maxval=100).start()
+	while True:
+		i = thread.expect_list(pl, timeout=None)
+		if i == 0: # EOF, Process exited
+			pbar.finish()
+			break
+		if i == 1: # Status
+			progress = int(thread.match.group(1))
+			pbar.update(progress)	
+	thread.close()
+
+def hardsub_matroska_video(file_name, output_dir, scale):
+	"""
+		Hardsub a matroska video reencoding it using a .srt file for Subititles
+		:param filename: Name of the file that had to be reencoded
+		:type filename: str 
+		:param output_dir: Directory where to place raw hardsubbed video
+		:type output_dir: str
+		:param scale: Subtitle font scale
+		:type a: int
+	"""
+	# Build MEncoder command
+	command = '{mencoder} -o {output_file} -nosound -noautosub -noskip -mc 0 -sub {sub_file} -subfont-text-scale {subtitle_scale} -ovc x264 -x264encopts crf=21:preset=slow:level_idc=31 {input_file}'.format(
+		mencoder = which("mencoder")[0],
+		output_file = "{}/{}.264".format(output_dir, os.path.splitext(os.path.basename(file_name))[0]),
+		sub_file = os.path.splitext(f)[0] + ".srt",
+		subtitle_scale = scale,
+		input_file = file_name
+	)
+	launch_process_with_progress_bar(command, '.*\((.*)%\).*', 'Video Encoding: ')
+
+def hardsub_video(file_name, output_dir, scale):
+	"""
+		Hardsub a video reencoding it using a .srt file for Subititles
+		:param filename: Name of the file that had to be reencoded
+		:type filename: str 
+		:param output_dir: Directory where to place raw hardsubbed video
+		:type output_dir: str
+		:param scale: Subtitle font scale
+		:type a: int
+	"""
+	magic_sig = magic.from_file(file_name)
+	kind = None
+	for ms in ALLOWED_MAGIC_SIG:
+		if ms in magic_sig:  
+			kind = ms
+			break
+	if kind == "Matroska":
+		hardsub_matroska_video(file_name, output_dir, scale)
 
 if __name__ == "__main__":
 	colorama.init()
@@ -164,4 +248,16 @@ if __name__ == "__main__":
 			print ("\t- {}".format(pe) );
 		sys.exit(3)
 	# Get Files to hardsub
-	files_to_hardsub = find_candidates(arguments.source_dir)	
+	files_to_hardsub = find_candidates(arguments.source_dir)
+	if len(files_to_hardsub) == 0:
+		print ("There are no video files to hardsub on the source directory.")
+		sys.exit(4)
+	print ("Those files will be hardsubbed (i.e. they are video file and they have a corresponding .srt file):")	
+	for f in files_to_hardsub:
+		print ("\t- "  + colorama.Fore.GREEN + colorama.Style.BRIGHT + "{}".format(os.path.basename(f)) + colorama.Style.NORMAL + colorama.Fore.RESET)
+	current_file = 1
+	for f in files_to_hardsub:
+		print ("\nStart work on " + colorama.Fore.GREEN + colorama.Style.BRIGHT + "{}".format(os.path.basename(f)) + colorama.Style.NORMAL + colorama.Fore.RESET + " ("  + colorama.Style.BRIGHT + "{}/{}".format(current_file, len(files_to_hardsub)) + colorama.Style.NORMAL + ").")
+		print ("Phase 1 - Hardsubbing video stream...")
+		hardsub_video(f, arguments.output, arguments.subtitle_scale)
+		current_file = current_file + 1
