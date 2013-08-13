@@ -119,7 +119,7 @@ def build_argument_parser():
 	)
 	ap.add_argument("source_dir", help="Directory that contains video files to hardsub. This directory also had to hold srt files with the same name of video file")
 	ap.add_argument("-o", "--output", required=True, help="States the output directory for hardsubbed video.", metavar="<output_dir>")
-	ap.add_argument("-s", "--subtitle-scale", default=5, help="Set the font scale (between 1 and 100)", metavar="<subtitle_scale>")
+	ap.add_argument("-s", "--subtitle-scale", default=2.5, help="Set the font scale (between 1 and 100)", metavar="<subtitle_scale>")
 	return ap
 
 def check_arguments(args):
@@ -205,6 +205,57 @@ def hardsub_matroska_video(file_name, output_dir, scale):
 	)
 	launch_process_with_progress_bar(command, '.*\((.*)%\).*', 'Video Encoding: ')
 
+def extract_matroska_audio(file_name, output_dir):
+	"""
+		Extract all audio tracks from a matroska container
+		:param filename: Name of the file that contains audio track
+		:type filename: str 
+		:param output_dir: Directory where to place raw audio track
+		:type output_dir: str	
+	"""
+	# detect how many audio track
+	command = "{mkvmerge} -i {input_file}".format(mkvmerge=which('mkvmerge')[0], input_file=file_name)
+	thread = pexpect.spawn(command)
+	pl = thread.compile_pattern_list([
+		pexpect.EOF,
+		".*(\d): audio.*"
+		])
+	audio_tracks = []
+	while True:
+		i = thread.expect_list(pl, timeout=None)
+		if i == 0: # EOF, Process exited
+			break
+		if i == 1: # Status
+			audio_tracks.append(int(thread.match.group(1)))	
+	thread.close()	 
+	# Now extract each audio track
+	for track in audio_tracks:
+		t_command = "{mkvextract} tracks {input_file} {track}:{dest_file}".format(
+			mkvextract = which("mkvextract")[0],
+			input_file = file_name,
+			track = track,
+			dest_file = output_dir + os.sep + "{}".format(track) + ".audio"
+		)
+		launch_process_with_progress_bar(t_command, '.*(\d)%.*', 'Extract audio track {}: '.format(track))
+		
+
+def extract_audio(file_name, output_dir):
+	"""
+		Extract all audio tracks from a container
+		:param filename: Name of the file that contains audio track
+		:type filename: str 
+		:param output_dir: Directory where to place raw audio track
+		:type output_dir: str	
+	"""
+	magic_sig = magic.from_file(file_name)
+	kind = None
+	for ms in ALLOWED_MAGIC_SIG:
+		if ms in magic_sig:  
+			kind = ms
+			break
+	if kind == "Matroska":
+		extract_matroska_audio(file_name, output_dir)
+
 def hardsub_video(file_name, output_dir, scale):
 	"""
 		Hardsub a video reencoding it using a .srt file for Subititles
@@ -223,6 +274,43 @@ def hardsub_video(file_name, output_dir, scale):
 			break
 	if kind == "Matroska":
 		hardsub_matroska_video(file_name, output_dir, scale)
+
+def build_matroska_final_file(file_name, output_dir):
+	"""
+		Rebuild the matroska container for source file with hardsubbed video track
+		:param filename: Name of the file that had to be reencoded
+		:type filename: str 
+		:param output_dir: Directory where to place raw hardsubbed video
+		:type output_dir: str
+	"""
+	list_of_files = [f for f in os.listdir(output_dir)  if re.match(r'.*\.(264|audio)', f)]
+	count = 0
+	file_param = []
+	for f in reversed(list_of_files):
+		file_param.append(output_dir + os.sep + f + " --compression {}:none".format(count))
+		count = count + 1
+	command = "{mkvmerge} -o {dest_file} {files_opt}".format(mkvmerge=which('mkvmerge')[0], dest_file = output_dir + os.sep + os.path.basename(file_name), files_opt = " ".join(file_param))
+	launch_process_with_progress_bar(command, '.*(\d)%.*', 'Rebuilding file: ')
+	# Cleaning some mess
+	for f in reversed(list_of_files):
+		os.remove(output_dir + os.sep + f) 
+
+def build_final_file(file_name, output_dir):
+	"""
+		Rebuild the container for source file with hardsubbed video track
+		:param filename: Name of the file that had to be reencoded
+		:type filename: str 
+		:param output_dir: Directory where to place raw hardsubbed video
+		:type output_dir: str
+	"""
+	magic_sig = magic.from_file(file_name)
+	kind = None
+	for ms in ALLOWED_MAGIC_SIG:
+		if ms in magic_sig:  
+			kind = ms
+			break
+	if kind == "Matroska":
+		build_matroska_final_file(file_name, output_dir)
 
 if __name__ == "__main__":
 	colorama.init()
@@ -258,6 +346,8 @@ if __name__ == "__main__":
 	current_file = 1
 	for f in files_to_hardsub:
 		print ("\nStart work on " + colorama.Fore.GREEN + colorama.Style.BRIGHT + "{}".format(os.path.basename(f)) + colorama.Style.NORMAL + colorama.Fore.RESET + " ("  + colorama.Style.BRIGHT + "{}/{}".format(current_file, len(files_to_hardsub)) + colorama.Style.NORMAL + ").")
-		print ("Phase 1 - Hardsubbing video stream...")
+		print ("")
 		hardsub_video(f, arguments.output, arguments.subtitle_scale)
+		extract_audio(f, arguments.output)
+		build_final_file(f, arguments.output)
 		current_file = current_file + 1
