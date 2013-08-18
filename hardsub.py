@@ -196,7 +196,7 @@ def hardsub_matroska_video(file_name, output_dir, scale):
 		:type a: int
 	"""
 	# Build MEncoder command
-	command = '{mencoder} -o {output_file} -nosound -noautosub -noskip -mc 0 -sub {sub_file} -subfont-text-scale {subtitle_scale} -ovc x264 -x264encopts crf=21:preset=slow:level_idc=31 {input_file}'.format(
+	command = '{mencoder} -o "{output_file}" -nosound -noautosub -noskip -mc 0 -sub "{sub_file}" -subfont-text-scale "{subtitle_scale}" -ovc x264 -x264encopts crf=21:preset=slow:level_idc=31 "{input_file}"'.format(
 		mencoder = which("mencoder")[0],
 		output_file = "{}/{}.264".format(output_dir, os.path.splitext(os.path.basename(file_name))[0]),
 		sub_file = os.path.splitext(f)[0] + ".srt",
@@ -214,11 +214,11 @@ def extract_matroska_audio(file_name, output_dir):
 		:type output_dir: str	
 	"""
 	# detect how many audio track
-	command = "{mkvmerge} -i {input_file}".format(mkvmerge=which('mkvmerge')[0], input_file=file_name)
+	command = '{mkvmerge} -i "{input_file}"'.format(mkvmerge=which('mkvmerge')[0], input_file=file_name)
 	thread = pexpect.spawn(command)
 	pl = thread.compile_pattern_list([
 		pexpect.EOF,
-		".*(\d): audio.*"
+		".*(\d+): audio.*"
 		])
 	audio_tracks = []
 	while True:
@@ -230,13 +230,13 @@ def extract_matroska_audio(file_name, output_dir):
 	thread.close()	 
 	# Now extract each audio track
 	for track in audio_tracks:
-		t_command = "{mkvextract} tracks {input_file} {track}:{dest_file}".format(
+		t_command = '{mkvextract} tracks "{input_file}" {track}:{dest_file}'.format(
 			mkvextract = which("mkvextract")[0],
 			input_file = file_name,
 			track = track,
 			dest_file = output_dir + os.sep + "{}".format(track) + ".audio"
 		)
-		launch_process_with_progress_bar(t_command, '.*(\d)%.*', 'Extract audio track {}: '.format(track))
+		launch_process_with_progress_bar(t_command, '.*(\d+)%.*', 'Extract audio track {}: '.format(track))
 		
 
 def extract_audio(file_name, output_dir):
@@ -289,8 +289,8 @@ def build_matroska_final_file(file_name, output_dir):
 	for f in reversed(list_of_files):
 		file_param.append(output_dir + os.sep + f + " --compression {}:none".format(count))
 		count = count + 1
-	command = "{mkvmerge} -o {dest_file} {files_opt}".format(mkvmerge=which('mkvmerge')[0], dest_file = output_dir + os.sep + os.path.basename(file_name), files_opt = " ".join(file_param))
-	launch_process_with_progress_bar(command, '.*(\d)%.*', 'Rebuilding file: ')
+	command = '{mkvmerge} -o "{dest_file}" {files_opt}'.format(mkvmerge=which('mkvmerge')[0], dest_file = output_dir + os.sep + os.path.basename(file_name), files_opt = " ".join(file_param))
+	launch_process_with_progress_bar(command, '.*(\d+)%.*', 'Rebuilding file: ')
 	# Cleaning some mess
 	for f in reversed(list_of_files):
 		os.remove(output_dir + os.sep + f) 
