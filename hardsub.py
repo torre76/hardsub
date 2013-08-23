@@ -34,16 +34,18 @@ REQUIRED_EXECUTABLES = (
 	'mplayer',
 	'mkvextract',
 	'mkvmerge',
-	'MP4Box'
-	
+	'MP4Box',
+	'mp4info'
 )
 
 # List of magic signatures for video files
-ALLOWED_MAGIC_SIG = [
-	'AVI',
-	'MPEG v4',
-	'Matroska'
-]
+ALLOWED_MAGIC_SIG = {
+	'AVI': 'avi',
+	'MPEG v4': 'mp4',
+	#'ISO Media, MPEG v4 system, version 1': 'mp4',
+	#'ISO Media, MPEG v4 system, version 2': 'mp4',
+	'Matroska': 'matroska' 
+}
 
 def which(name, flags=os.X_OK):
 	    """Search PATH for executable files with the given name.
@@ -136,6 +138,61 @@ def check_arguments(args):
 		errors.append( colorama.Style.BRIGHT + "source directory" +  colorama.Style.NORMAL + " is not a valid directory");
 	return (len(errors) == 0, errors)
 
+def check_matroska_video(file_name):
+	"""
+		Checks if the file has a video track
+		:param file_name: file to check
+		:type fille_name: string
+		:returns: boolean -- True if the file has a video track, False otherwise. 
+	"""
+	found = False
+	command = '{mkvmerge} -i "{input_file}"'.format(mkvmerge=which('mkvmerge')[0], input_file=file_name)
+	thread = pexpect.spawn(command)
+	pl = thread.compile_pattern_list([
+		pexpect.EOF,
+		".*video.*"
+		])
+	while True:
+		i = thread.expect_list(pl, timeout=None)
+		if i == 0: # EOF, Process exited
+			break
+		if i == 1: # Status
+			found = True	
+	thread.close()	 
+	return found
+
+def check_mp4_video(file_name):
+	"""
+		Checks if the file has a video track
+		:param file_name: file to check
+		:type fille_name: string
+		:returns: boolean -- True if the file has a video track, False otherwise. 
+	"""
+	found = False
+	command = '{mp4info} "{input_file}"'.format(mp4info=which('mp4info')[0], input_file=file_name)
+	thread = pexpect.spawn(command)
+	pl = thread.compile_pattern_list([
+		pexpect.EOF,
+		".*video.*"
+		])
+	while True:
+		i = thread.expect_list(pl, timeout=None)
+		if i == 0: # EOF, Process exited
+			break
+		if i == 1: # Status
+			found = True	
+	thread.close()	 
+	return found
+
+def check_avi_video(file_name):
+	"""
+		Checks if the file has a video track
+		:param file_name: file to check
+		:type fille_name: string
+		:returns: boolean -- True if the file has a video track, False otherwise. 
+	"""
+	return True
+
 def find_candidates(directory):
 	"""
 		Find all video container file that have an srt associated for hardsubbing
@@ -143,18 +200,19 @@ def find_candidates(directory):
 		:type directory: str
 		:returns: list -- list of file that hat to be hardsubbed
 	"""
-	candidates = []
+	candidates = {}
 	for f in os.listdir(directory):
 		if os.path.isfile(directory + os.sep + f):
 			for m in ALLOWED_MAGIC_SIG:
 				if m in magic.from_file(directory + os.sep + f):
-					candidates.append(directory + os.sep + f)
+					candidates[directory + os.sep + f] = ALLOWED_MAGIC_SIG[m]
 	# Check if there is a srt companion file, if not, remove element from candidates
 	final_candidates = []
 	for f in candidates:
 		sub_file = os.path.splitext(f)[0] + ".srt"
 		if os.path.isfile(sub_file):
-			final_candidates.append(f)
+			if globals()['check_'+candidates[f]+'_video'](f):
+				final_candidates.append(f)
 	return final_candidates
 
 def launch_process_with_progress_bar(command, progress_reg_exp, progress_bar_message="Working"):
@@ -205,6 +263,39 @@ def hardsub_matroska_video(file_name, output_dir, scale):
 	)
 	launch_process_with_progress_bar(command, '.*\((.*)%\).*', 'Video Encoding: ')
 
+def hardsub_mp4_video(file_name, output_dir, scale):
+	"""
+		Hardsub a MP4 video reencoding it using a .srt file for Subititles
+		:param filename: Name of the file that had to be reencoded
+		:type filename: str 
+		:param output_dir: Directory where to place raw hardsubbed video
+		:type output_dir: str
+		:param scale: Subtitle font scale
+		:type a: int
+	"""
+	# Build MEncoder command
+	command = '{mencoder} -o "{output_file}" -nosound -noautosub -noskip -mc 0 -sub "{sub_file}" -subfont-text-scale "{subtitle_scale}" -ovc x264 -x264encopts crf=21:preset=slow:level_idc=31 "{input_file}"'.format(
+		mencoder = which("mencoder")[0],
+		output_file = "{}/{}.264".format(output_dir, os.path.splitext(os.path.basename(file_name))[0]),
+		sub_file = os.path.splitext(f)[0] + ".srt",
+		subtitle_scale = scale,
+		input_file = file_name
+	)
+	launch_process_with_progress_bar(command, '.*\((.*)%\).*', 'Video Encoding: ')
+
+def hardsub_avi_video(file_name, output_dir, scale):
+	"""
+		Hardsub a AVI video reencoding it using a .srt file for Subititles
+		:param filename: Name of the file that had to be reencoded
+		:type filename: str 
+		:param output_dir: Directory where to place raw hardsubbed video
+		:type output_dir: str
+		:param scale: Subtitle font scale
+		:type a: int
+	"""
+	print(colorama.Style.BRIGHT + "Not implemented" + colorama.Style.NORMAL)
+	pass
+
 def extract_matroska_audio(file_name, output_dir):
 	"""
 		Extract all audio tracks from a matroska container
@@ -238,6 +329,54 @@ def extract_matroska_audio(file_name, output_dir):
 		)
 		launch_process_with_progress_bar(t_command, '.*(\d+)%.*', 'Extract audio track {}: '.format(track))
 		
+def extract_mp4_audio(file_name, output_dir):
+	"""
+		Extract all audio tracks from a MP4 container
+		:param filename: Name of the file that contains audio track
+		:type filename: str 
+		:param output_dir: Directory where to place raw audio track
+		:type output_dir: str	
+	"""
+	# detect how many audio tracks
+	command = '{mp4info} "{input_file}"'.format(mp4info=which('mp4info')[0], input_file=file_name)
+	thread = pexpect.spawn(command)
+	pl = thread.compile_pattern_list([
+		pexpect.EOF,
+		"(\d+)\s+audio\s+(.*)"
+		])
+	audio_tracks = {}
+	while True:
+		i = thread.expect_list(pl, timeout=None)
+		if i == 0: # EOF, Process exited
+			break
+		if i == 1: # Status
+			# MP4Box gets the type of the audio track from the extension
+			# TODO(gquadro): handle types other than AAC
+			if 'AAC' in thread.match.group(2):
+				audio_tracks[int(thread.match.group(1))] = 'aac'
+			else:
+				audio_tracks[int(thread.match.group(1))] = 'audio'
+	thread.close()	 
+	# Now extract each audio track
+	for track in audio_tracks:
+		t_command = '{mp4box} -out "{dest_file}" -raw {track} "{input_file}"'.format(
+			mp4box = which("MP4Box")[0],
+			input_file = file_name,
+			track = track,
+			dest_file = output_dir + os.sep + "{}".format(track) + "." + audio_tracks[track]
+		)
+		launch_process_with_progress_bar(t_command, '.*(\d+)%.*', 'Extract audio track {}: '.format(track))
+
+def extract_avi_audio(file_name, output_dir):
+	"""
+		Extract all audio tracks from a AVI container
+		:param filename: Name of the file that contains audio track
+		:type filename: str 
+		:param output_dir: Directory where to place raw audio track
+		:type output_dir: str	
+	"""
+	print(colorama.Style.BRIGHT + "Not implemented" + colorama.Style.NORMAL)
+	pass
 
 def extract_audio(file_name, output_dir):
 	"""
@@ -251,10 +390,10 @@ def extract_audio(file_name, output_dir):
 	kind = None
 	for ms in ALLOWED_MAGIC_SIG:
 		if ms in magic_sig:  
-			kind = ms
+			kind = ALLOWED_MAGIC_SIG[ms]
 			break
-	if kind == "Matroska":
-		extract_matroska_audio(file_name, output_dir)
+	if kind is not None:
+		globals()['extract_'+kind+'_audio'](file_name, output_dir)
 
 def hardsub_video(file_name, output_dir, scale):
 	"""
@@ -270,10 +409,10 @@ def hardsub_video(file_name, output_dir, scale):
 	kind = None
 	for ms in ALLOWED_MAGIC_SIG:
 		if ms in magic_sig:  
-			kind = ms
+			kind = ALLOWED_MAGIC_SIG[ms]
 			break
-	if kind == "Matroska":
-		hardsub_matroska_video(file_name, output_dir, scale)
+	if kind is not None:
+		globals()['hardsub_'+kind+'_video'](file_name, output_dir, scale)
 
 def build_matroska_final_file(file_name, output_dir):
 	"""
@@ -295,6 +434,48 @@ def build_matroska_final_file(file_name, output_dir):
 	for f in reversed(list_of_files):
 		os.remove(output_dir + os.sep + f) 
 
+def build_mp4_final_file(file_name, output_dir):
+	"""
+		Rebuild the MP4 container for source file with hardsubbed video track
+		:param filename: Name of the file that had to be reencoded
+		:type filename: str 
+		:param output_dir: Directory where to place raw hardsubbed video
+		:type output_dir: str
+	"""
+	#MP4Box needs a file that starts with a keyframe
+	video_files = [f for f in os.listdir(output_dir)  if re.match(r'.*\.(264)', f)]
+	for f in video_files:
+		command = '{MP4Box} -aviraw video {avifile}'.format(MP4Box=which('MP4Box')[0], avifile = output_dir + os.sep + f)
+		launch_process_with_progress_bar(command, '.*(\d+)%.*', 'Extracting video track: ')
+		
+	list_of_files = [f for f in os.listdir(output_dir)  if re.match(r'.*\.(264|aac|audio)', f)]
+	file_param = []
+	for f in reversed(list_of_files):
+		if f[-4:] != '.264':
+			file_param.append('-add ' + output_dir + os.sep + f)
+	command = '{MP4Box} -quiet -add {video_file} {add_audio_opts} {dest_file}'.format(
+		MP4Box = which('MP4Box')[0],
+		video_file = output_dir + os.sep + video_files[0][:-4] + '_video.h264',
+		add_audio_opts = ' '.join(file_param),
+		dest_file = output_dir + os.sep + os.path.basename(file_name)
+	)
+	launch_process_with_progress_bar(command, '.*(\d+)%.*', 'Rebuilding file: ')
+	# Cleaning some mess
+	os.remove(output_dir + os.sep + video_files[0][:-4] + '_video.h264')
+	for f in reversed(list_of_files):
+		os.remove(output_dir + os.sep + f) 
+
+def build_avi_final_file(file_name, output_dir):
+	"""
+		Rebuild the AVI container for source file with hardsubbed video track
+		:param filename: Name of the file that had to be reencoded
+		:type filename: str 
+		:param output_dir: Directory where to place raw hardsubbed video
+		:type output_dir: str
+	"""
+	print(colorama.Style.BRIGHT + "Not implemented" + colorama.Style.NORMAL)
+	pass
+
 def build_final_file(file_name, output_dir):
 	"""
 		Rebuild the container for source file with hardsubbed video track
@@ -307,10 +488,10 @@ def build_final_file(file_name, output_dir):
 	kind = None
 	for ms in ALLOWED_MAGIC_SIG:
 		if ms in magic_sig:  
-			kind = ms
+			kind = ALLOWED_MAGIC_SIG[ms]
 			break
-	if kind == "Matroska":
-		build_matroska_final_file(file_name, output_dir)
+	if kind is not None:
+		globals()['build_'+kind+'_final_file'](file_name, output_dir)
 
 if __name__ == "__main__":
 	colorama.init()
