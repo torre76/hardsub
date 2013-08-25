@@ -1,6 +1,8 @@
 *anjuta*
 *.py~
+*.pyc
 bin
 include
 lib
 video-sample
+*~

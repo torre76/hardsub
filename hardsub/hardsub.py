@@ -1,8 +1,9 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """
-	hardsub.py: Encode video with hard subtitles
+.. currentmodule: hardsub
+
+    :synopsis: Module that contains function and classes to hardsub videos
 """
 
 import argparse
@@ -116,7 +117,7 @@ def build_argument_parser():
 		:returns: ArgumentParser -- ArgumentParser for this script
 	"""
 	ap = argparse.ArgumentParser(
-		prog="hardsub",
+		prog="hs",
 		description="Encode video with hardsubs"
 	)
 	ap.add_argument("source_dir", help="Directory that contains video files to hardsub. This directory also had to hold srt files with the same name of video file")
@@ -493,7 +494,10 @@ def build_final_file(file_name, output_dir):
 	if kind is not None:
 		globals()['build_'+kind+'_final_file'](file_name, output_dir)
 
-if __name__ == "__main__":
+def hardsub_main():
+	"""
+		Hardsub files specified on standard input
+	"""
 	colorama.init()
 	header()
 	# First check platform and, if it is not OK, programm will exit
