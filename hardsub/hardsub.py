@@ -258,7 +258,7 @@ def hardsub_matroska_video(file_name, output_dir, scale):
 	command = '{mencoder} -o "{output_file}" -nosound -noautosub -noskip -mc 0 -sub "{sub_file}" -subfont-text-scale "{subtitle_scale}" -ovc x264 -x264encopts crf=21:preset=slow:level_idc=31 "{input_file}"'.format(
 		mencoder = which("mencoder")[0],
 		output_file = "{}/{}.264".format(output_dir, os.path.splitext(os.path.basename(file_name))[0]),
-		sub_file = os.path.splitext(f)[0] + ".srt",
+		sub_file = os.path.splitext(file_name)[0] + ".srt",
 		subtitle_scale = scale,
 		input_file = file_name
 	)
