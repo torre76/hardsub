@@ -231,7 +231,7 @@ def launch_process_with_progress_bar(command, progress_reg_exp, progress_bar_mes
 		pexpect.EOF,
 		progress_reg_exp
 		])
-	widgets = [progress_bar_message, progressbar.Percentage(), ' ', progressbar.Bar(),
+	widgets = [progress_bar_message, progressbar.Percentage(), ' ', progressbar.Bar(fill="-"),
                ' ', progressbar.AdaptiveETA(), ' ']
 	pbar = progressbar.ProgressBar(widgets=widgets, maxval=100).start()
 	while True:
