@@ -18,11 +18,11 @@ import magic
 import pexpect
 import progressbar
 
-__author__ = "Gian Luca Dalla Torre"
-__copyright__ = "Copyright 2013, Gian Luca Dalla Torre"
+__author__ = "Gian Luca Dalla Torre, Luigi Bellagotti"
+__copyright__ = "Copyright 2013, Gian Luca Dalla Torre and Luigi Bellagotti"
 __credits__ = []
 __license__ = "GPL v.3"
-__version__ = "0.1"
+__version__ = "0.0.1"
 __maintainer__ = "Gian Luca Dalla Torre"
 __email__ = "gianluca.dallatorre@gmail.com"
 __status__ = "Alpha"
