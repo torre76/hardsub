@@ -123,6 +123,7 @@ def build_argument_parser():
 	ap.add_argument("source_dir", help="Directory that contains video files to hardsub. This directory also had to hold srt files with the same name of video file")
 	ap.add_argument("-o", "--output", required=True, help="States the output directory for hardsubbed video.", metavar="<output_dir>")
 	ap.add_argument("-s", "--subtitle-scale", default=2.5, help="Set the font scale (between 1 and 100)", metavar="<subtitle_scale>")
+	ap.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
 	return ap
 
 def check_arguments(args):
@@ -139,7 +140,7 @@ def check_arguments(args):
 		errors.append( colorama.Style.BRIGHT + "source directory" +  colorama.Style.NORMAL + " is not a valid directory");
 	return (len(errors) == 0, errors)
 
-def check_matroska_video(file_name):
+def check_matroska_video(file_name, verbose=False):
 	"""
 		Checks if the file has a video track
 		:param file_name: file to check
@@ -148,6 +149,8 @@ def check_matroska_video(file_name):
 	"""
 	found = False
 	command = '{mkvmerge} -i "{input_file}"'.format(mkvmerge=which('mkvmerge')[0], input_file=file_name)
+	if verbose:
+		print command
 	thread = pexpect.spawn(command)
 	pl = thread.compile_pattern_list([
 		pexpect.EOF,
@@ -162,7 +165,7 @@ def check_matroska_video(file_name):
 	thread.close()	 
 	return found
 
-def check_mp4_video(file_name):
+def check_mp4_video(file_name, verbose=False):
 	"""
 		Checks if the file has a video track
 		:param file_name: file to check
@@ -171,6 +174,8 @@ def check_mp4_video(file_name):
 	"""
 	found = False
 	command = '{mp4info} "{input_file}"'.format(mp4info=which('mp4info')[0], input_file=file_name)
+	if verbose:
+		print command
 	thread = pexpect.spawn(command)
 	pl = thread.compile_pattern_list([
 		pexpect.EOF,
@@ -185,7 +190,7 @@ def check_mp4_video(file_name):
 	thread.close()	 
 	return found
 
-def check_avi_video(file_name):
+def check_avi_video(file_name, verbose=False):
 	"""
 		Checks if the file has a video track
 		:param file_name: file to check
@@ -195,6 +200,8 @@ def check_avi_video(file_name):
 	found = False
 	# copyed from midentify
 	command = '{mplayer} -noconfig all -cache-min 0 -vo null -ao null -frames 0 -identify "{input_file}" 2>/dev/null | grep ID_VIDEO_FORMAT'.format(mplayer=which('mplayer')[0], input_file=file_name)
+	if verbose:
+		print command
 	thread = pexpect.spawn(command)
 	pl = thread.compile_pattern_list([
 		pexpect.EOF,
@@ -231,7 +238,7 @@ def find_candidates(directory):
 				final_candidates.append(f)
 	return final_candidates
 
-def launch_process_with_progress_bar(command, progress_reg_exp, progress_bar_message="Working"):
+def launch_process_with_progress_bar(command, progress_reg_exp, progress_bar_message="Working", verbose=False):
 	"""
 		Launch a process and show a progress bar with auto calculated ETA.
 		:param command: Command to launch
@@ -241,6 +248,8 @@ def launch_process_with_progress_bar(command, progress_reg_exp, progress_bar_mes
 		:param progress_bar_message: Message shown on progress bar
 		:type progress_bar_message: str
 	"""
+	if verbose:
+		print command
 	thread = pexpect.spawn(command)
 	pl = thread.compile_pattern_list([
 		pexpect.EOF,
@@ -259,7 +268,7 @@ def launch_process_with_progress_bar(command, progress_reg_exp, progress_bar_mes
 			pbar.update(progress)	
 	thread.close()
 
-def hardsub_matroska_video(file_name, output_dir, scale):
+def hardsub_matroska_video(file_name, output_dir, scale, verbose=False):
 	"""
 		Hardsub a matroska video reencoding it using a .srt file for Subititles
 		:param filename: Name of the file that had to be reencoded
@@ -277,9 +286,9 @@ def hardsub_matroska_video(file_name, output_dir, scale):
 		subtitle_scale = scale,
 		input_file = file_name
 	)
-	launch_process_with_progress_bar(command, '.*\((.*)%\).*', 'Video Encoding: ')
+	launch_process_with_progress_bar(command, '.*\((.*)%\).*', 'Video Encoding: ', verbose)
 
-def hardsub_mp4_video(file_name, output_dir, scale):
+def hardsub_mp4_video(file_name, output_dir, scale, verbose=False):
 	"""
 		Hardsub a MP4 video reencoding it using a .srt file for Subititles
 		:param filename: Name of the file that had to be reencoded
@@ -297,9 +306,9 @@ def hardsub_mp4_video(file_name, output_dir, scale):
 		subtitle_scale = scale,
 		input_file = file_name
 	)
-	launch_process_with_progress_bar(command, '.*\((.*)%\).*', 'Video Encoding: ')
+	launch_process_with_progress_bar(command, '.*\((.*)%\).*', 'Video Encoding: ', verbose)
 
-def hardsub_avi_video(file_name, output_dir, scale):
+def hardsub_avi_video(file_name, output_dir, scale, verbose=False):
 	"""
 		Hardsub a AVI video reencoding it using a .srt file for Subititles
 		:param filename: Name of the file that had to be reencoded
@@ -317,9 +326,9 @@ def hardsub_avi_video(file_name, output_dir, scale):
 		subtitle_scale = scale,
 		input_file = file_name
 	)
-	launch_process_with_progress_bar(command, '.*\((.*)%\).*', 'Video Encoding: ')
+	launch_process_with_progress_bar(command, '.*\((.*)%\).*', 'Video Encoding: ', verbose)
 
-def extract_matroska_audio(file_name, output_dir):
+def extract_matroska_audio(file_name, output_dir, verbose=False):
 	"""
 		Extract all audio tracks from a matroska container
 		:param filename: Name of the file that contains audio track
@@ -329,6 +338,8 @@ def extract_matroska_audio(file_name, output_dir):
 	"""
 	# detect how many audio track
 	command = '{mkvmerge} -i "{input_file}"'.format(mkvmerge=which('mkvmerge')[0], input_file=file_name)
+	if verbose:
+		print command
 	thread = pexpect.spawn(command)
 	pl = thread.compile_pattern_list([
 		pexpect.EOF,
@@ -350,9 +361,9 @@ def extract_matroska_audio(file_name, output_dir):
 			track = track,
 			dest_file = output_dir + os.sep + "{}".format(track) + ".audio"
 		)
-		launch_process_with_progress_bar(t_command, '.*(\d+)%.*', 'Extract audio track {}: '.format(track))
+		launch_process_with_progress_bar(t_command, '.*(\d+)%.*', 'Extract audio track {}: '.format(track), verbose)
 		
-def extract_mp4_audio(file_name, output_dir):
+def extract_mp4_audio(file_name, output_dir, verbose=False):
 	"""
 		Extract all audio tracks from a MP4 container
 		:param filename: Name of the file that contains audio track
@@ -362,6 +373,8 @@ def extract_mp4_audio(file_name, output_dir):
 	"""
 	# detect how many audio tracks
 	command = '{mp4info} "{input_file}"'.format(mp4info=which('mp4info')[0], input_file=file_name)
+	if verbose:
+		print command
 	thread = pexpect.spawn(command)
 	pl = thread.compile_pattern_list([
 		pexpect.EOF,
@@ -388,9 +401,9 @@ def extract_mp4_audio(file_name, output_dir):
 			track = track,
 			dest_file = output_dir + os.sep + "{}".format(track) + "." + audio_tracks[track]
 		)
-		launch_process_with_progress_bar(t_command, '.*(\d+)%.*', 'Extract audio track {}: '.format(track))
+		launch_process_with_progress_bar(t_command, '.*(\d+)%.*', 'Extract audio track {}: '.format(track), verbose)
 
-def extract_avi_audio(file_name, output_dir):
+def extract_avi_audio(file_name, output_dir, verbose=False):
 	"""
 		Extract all audio tracks from a AVI container
 		:param filename: Name of the file that contains audio track
@@ -400,6 +413,8 @@ def extract_avi_audio(file_name, output_dir):
 	"""
 	# detect how many audio track
 	command = '{mplayer} -noconfig all -cache-min 0 -vo null -ao null -frames 0 -identify "{input_file}" 2>/dev/null | grep ID_AUDIO_ID'.format(mplayer=which('mplayer')[0], input_file=file_name)
+	if verbose:
+		print command
 	thread = pexpect.spawn(command)
 	pl = thread.compile_pattern_list([
 		pexpect.EOF,
@@ -421,9 +436,9 @@ def extract_avi_audio(file_name, output_dir):
 			track = track,
 			dest_file = output_dir + os.sep + "{}".format(track) + ".audio"
 		)
-		launch_process_with_progress_bar(t_command, '.*(\d+)%.*', 'Extract audio track {}: '.format(track))
+		launch_process_with_progress_bar(t_command, '.*(\d+)%.*', 'Extract audio track {}: '.format(track), verbose)
 
-def extract_audio(file_name, output_dir):
+def extract_audio(file_name, output_dir, verbose=False):
 	"""
 		Extract all audio tracks from a container
 		:param filename: Name of the file that contains audio track
@@ -438,9 +453,9 @@ def extract_audio(file_name, output_dir):
 			kind = ALLOWED_MAGIC_SIG[ms]
 			break
 	if kind is not None:
-		globals()['extract_'+kind+'_audio'](file_name, output_dir)
+		globals()['extract_'+kind+'_audio'](file_name, output_dir, verbose)
 
-def hardsub_video(file_name, output_dir, scale):
+def hardsub_video(file_name, output_dir, scale, verbose=False):
 	"""
 		Hardsub a video reencoding it using a .srt file for Subititles
 		:param filename: Name of the file that had to be reencoded
@@ -457,9 +472,9 @@ def hardsub_video(file_name, output_dir, scale):
 			kind = ALLOWED_MAGIC_SIG[ms]
 			break
 	if kind is not None:
-		globals()['hardsub_'+kind+'_video'](file_name, output_dir, scale)
+		globals()['hardsub_'+kind+'_video'](file_name, output_dir, scale, verbose)
 
-def build_matroska_final_file(file_name, output_dir):
+def build_matroska_final_file(file_name, output_dir, verbose=False):
 	"""
 		Rebuild the matroska container for source file with hardsubbed video track
 		:param filename: Name of the file that had to be reencoded
@@ -474,12 +489,12 @@ def build_matroska_final_file(file_name, output_dir):
 		file_param.append(output_dir + os.sep + f + " --compression {}:none".format(count))
 		count = count + 1
 	command = '{mkvmerge} -o "{dest_file}" {files_opt}'.format(mkvmerge=which('mkvmerge')[0], dest_file = output_dir + os.sep + os.path.basename(file_name), files_opt = " ".join(file_param))
-	launch_process_with_progress_bar(command, '.*(\d+)%.*', 'Rebuilding file: ')
+	launch_process_with_progress_bar(command, '.*(\d+)%.*', 'Rebuilding file: ', verbose)
 	# Cleaning some mess
 	for f in reversed(list_of_files):
 		os.remove(output_dir + os.sep + f) 
 
-def build_mp4_final_file(file_name, output_dir):
+def build_mp4_final_file(file_name, output_dir, verbose=False):
 	"""
 		Rebuild the MP4 container for source file with hardsubbed video track
 		:param filename: Name of the file that had to be reencoded
@@ -496,12 +511,12 @@ def build_mp4_final_file(file_name, output_dir):
 		add_audio_opts = ' '.join(file_param),
 		dest_file = output_dir + os.sep + os.path.basename(file_name)
 	)
-	launch_process_with_progress_bar(command, '.*(\d+)%.*', 'Rebuilding file: ')
+	launch_process_with_progress_bar(command, '.*(\d+)%.*', 'Rebuilding file: ', verbose)
 	# Cleaning some mess
 	for f in reversed(list_of_files):
 		os.remove(output_dir + os.sep + f) 
 
-def build_avi_final_file(file_name, output_dir):
+def build_avi_final_file(file_name, output_dir, verbose=False):
 	"""
 		Rebuild the AVI container for source file with hardsubbed video track
 		:param filename: Name of the file that had to be reencoded
@@ -523,13 +538,12 @@ def build_avi_final_file(file_name, output_dir):
 		add_audio_opts = ' '.join(file_param),
 		dest_file = output_dir + os.sep + os.path.basename(file_name)
 	)
-	print command
-	launch_process_with_progress_bar(command, '.*(\d+)%.*', 'Rebuilding file: ')
+	launch_process_with_progress_bar(command, '.*(\d+)%.*', 'Rebuilding file: ', verbose)
 	# Cleaning some mess
 	#for f in reversed(list_of_files):
 	#	os.remove(output_dir + os.sep + f) 
 
-def build_final_file(file_name, output_dir):
+def build_final_file(file_name, output_dir, verbose=False):
 	"""
 		Rebuild the container for source file with hardsubbed video track
 		:param filename: Name of the file that had to be reencoded
@@ -544,7 +558,7 @@ def build_final_file(file_name, output_dir):
 			kind = ALLOWED_MAGIC_SIG[ms]
 			break
 	if kind is not None:
-		globals()['build_'+kind+'_final_file'](file_name, output_dir)
+		globals()['build_'+kind+'_final_file'](file_name, output_dir, verbose)
 
 def hardsub_main():
 	"""
@@ -584,7 +598,7 @@ def hardsub_main():
 	for f in files_to_hardsub:
 		print ("\nStart work on " + colorama.Fore.GREEN + colorama.Style.BRIGHT + "{}".format(os.path.basename(f)) + colorama.Style.NORMAL + colorama.Fore.RESET + " ("  + colorama.Style.BRIGHT + "{}/{}".format(current_file, len(files_to_hardsub)) + colorama.Style.NORMAL + ").")
 		print ("")
-		hardsub_video(f, arguments.output, arguments.subtitle_scale)
-		extract_audio(f, arguments.output)
-		build_final_file(f, arguments.output)
+		hardsub_video(f, arguments.output, arguments.subtitle_scale, arguments.verbose)
+		extract_audio(f, arguments.output, arguments.verbose)
+		build_final_file(f, arguments.output, arguments.verbose)
 		current_file = current_file + 1
