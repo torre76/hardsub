@@ -275,10 +275,10 @@ def hardsub_mp4_video(file_name, output_dir, scale):
 		:type a: int
 	"""
 	# Build MEncoder command
-	command = '{mencoder} -o "{output_file}" -nosound -noautosub -noskip -mc 0 -sub "{sub_file}" -subfont-text-scale "{subtitle_scale}" -ovc x264 -x264encopts crf=21:preset=slow:level_idc=31 "{input_file}"'.format(
+	command = '{mencoder} -o "{output_file}" -of rawvideo -nosound -noautosub -noskip -mc 0 -sub "{sub_file}" -subfont-text-scale "{subtitle_scale}" -ovc x264 -x264encopts crf=21:preset=slow:level_idc=31 "{input_file}"'.format(
 		mencoder = which("mencoder")[0],
 		output_file = "{}/{}.264".format(output_dir, os.path.splitext(os.path.basename(file_name))[0]),
-		sub_file = os.path.splitext(f)[0] + ".srt",
+		sub_file = os.path.splitext(file_name)[0] + ".srt",
 		subtitle_scale = scale,
 		input_file = file_name
 	)
@@ -443,26 +443,17 @@ def build_mp4_final_file(file_name, output_dir):
 		:param output_dir: Directory where to place raw hardsubbed video
 		:type output_dir: str
 	"""
-	#MP4Box needs a file that starts with a keyframe
-	video_files = [f for f in os.listdir(output_dir)  if re.match(r'.*\.(264)', f)]
-	for f in video_files:
-		command = '{MP4Box} -aviraw video {avifile}'.format(MP4Box=which('MP4Box')[0], avifile = output_dir + os.sep + f)
-		launch_process_with_progress_bar(command, '.*(\d+)%.*', 'Extracting video track: ')
-		
 	list_of_files = [f for f in os.listdir(output_dir)  if re.match(r'.*\.(264|aac|audio)', f)]
 	file_param = []
 	for f in reversed(list_of_files):
-		if f[-4:] != '.264':
-			file_param.append('-add ' + output_dir + os.sep + f)
-	command = '{MP4Box} -quiet -add {video_file} {add_audio_opts} {dest_file}'.format(
+		file_param.append('-add ' + output_dir + os.sep + f)
+	command = '{MP4Box} -quiet {add_audio_opts} {dest_file}'.format(
 		MP4Box = which('MP4Box')[0],
-		video_file = output_dir + os.sep + video_files[0][:-4] + '_video.h264',
 		add_audio_opts = ' '.join(file_param),
 		dest_file = output_dir + os.sep + os.path.basename(file_name)
 	)
 	launch_process_with_progress_bar(command, '.*(\d+)%.*', 'Rebuilding file: ')
 	# Cleaning some mess
-	os.remove(output_dir + os.sep + video_files[0][:-4] + '_video.h264')
 	for f in reversed(list_of_files):
 		os.remove(output_dir + os.sep + f) 
 
