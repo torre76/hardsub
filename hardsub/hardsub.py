@@ -192,7 +192,22 @@ def check_avi_video(file_name):
 		:type fille_name: string
 		:returns: boolean -- True if the file has a video track, False otherwise. 
 	"""
-	return True
+	found = False
+	# copyed from midentify
+	command = '{mplayer} -noconfig all -cache-min 0 -vo null -ao null -frames 0 -identify "{input_file}" 2>/dev/null | grep ID_VIDEO_FORMAT'.format(mplayer=which('mplayer')[0], input_file=file_name)
+	thread = pexpect.spawn(command)
+	pl = thread.compile_pattern_list([
+		pexpect.EOF,
+		".*ID_VIDEO_FORMAT.*"
+		])
+	while True:
+		i = thread.expect_list(pl, timeout=None)
+		if i == 0: # EOF, Process exited
+			break
+		if i == 1: # Status
+			found = True	
+	thread.close()	 
+	return found
 
 def find_candidates(directory):
 	"""
@@ -294,8 +309,15 @@ def hardsub_avi_video(file_name, output_dir, scale):
 		:param scale: Subtitle font scale
 		:type a: int
 	"""
-	print(colorama.Style.BRIGHT + "Not implemented" + colorama.Style.NORMAL)
-	pass
+	# Build MEncoder command
+	command = '{mencoder} -o "{output_file}" -nosound -noautosub -noskip -mc 0 -sub "{sub_file}" -subfont-text-scale "{subtitle_scale}" -ovc xvid -xvidencopts fixed_quant=2 "{input_file}"'.format(
+		mencoder = which("mencoder")[0],
+		output_file = "{}/{}.xvid".format(output_dir, os.path.splitext(os.path.basename(file_name))[0]),
+		sub_file = os.path.splitext(file_name)[0] + ".srt",
+		subtitle_scale = scale,
+		input_file = file_name
+	)
+	launch_process_with_progress_bar(command, '.*\((.*)%\).*', 'Video Encoding: ')
 
 def extract_matroska_audio(file_name, output_dir):
 	"""
@@ -376,8 +398,30 @@ def extract_avi_audio(file_name, output_dir):
 		:param output_dir: Directory where to place raw audio track
 		:type output_dir: str	
 	"""
-	print(colorama.Style.BRIGHT + "Not implemented" + colorama.Style.NORMAL)
-	pass
+	# detect how many audio track
+	command = '{mplayer} -noconfig all -cache-min 0 -vo null -ao null -frames 0 -identify "{input_file}" 2>/dev/null | grep ID_AUDIO_ID'.format(mplayer=which('mplayer')[0], input_file=file_name)
+	thread = pexpect.spawn(command)
+	pl = thread.compile_pattern_list([
+		pexpect.EOF,
+		"ID_AUDIO_ID=(\d+).*"
+		])
+	audio_tracks = []
+	while True:
+		i = thread.expect_list(pl, timeout=None)
+		if i == 0: # EOF, Process exited
+			break
+		if i == 1: # Status
+			audio_tracks.append(int(thread.match.group(1)))	
+	thread.close()	 
+	# Now extract each audio track
+	for track in audio_tracks:
+		t_command = '{mplayer} -aid {track} -dumpaudio -dumpfile {dest_file} "{input_file}"'.format(
+			mplayer = which("mplayer")[0],
+			input_file = file_name,
+			track = track,
+			dest_file = output_dir + os.sep + "{}".format(track) + ".audio"
+		)
+		launch_process_with_progress_bar(t_command, '.*(\d+)%.*', 'Extract audio track {}: '.format(track))
 
 def extract_audio(file_name, output_dir):
 	"""
@@ -465,8 +509,25 @@ def build_avi_final_file(file_name, output_dir):
 		:param output_dir: Directory where to place raw hardsubbed video
 		:type output_dir: str
 	"""
-	print(colorama.Style.BRIGHT + "Not implemented" + colorama.Style.NORMAL)
-	pass
+	list_of_files = [f for f in os.listdir(output_dir)  if re.match(r'.*\.(xvid|audio)', f)]
+	file_param = []
+	for f in reversed(list_of_files):
+		if f[-5:] == '.xvid':
+			video_file = output_dir + os.sep + f
+		else:
+			file_param.append('-audiofile ' + output_dir + os.sep + f)
+	# TODO(gquadro): test with more than one audio track
+	command = '{mencoder} "{src_file}" -ovc copy -oac copy -mc 0 -noskip -noodml {add_audio_opts} -o "{dest_file}"'.format(
+		mencoder = which('mencoder')[0],
+                src_file = video_file,
+		add_audio_opts = ' '.join(file_param),
+		dest_file = output_dir + os.sep + os.path.basename(file_name)
+	)
+	print command
+	launch_process_with_progress_bar(command, '.*(\d+)%.*', 'Rebuilding file: ')
+	# Cleaning some mess
+	#for f in reversed(list_of_files):
+	#	os.remove(output_dir + os.sep + f) 
 
 def build_final_file(file_name, output_dir):
 	"""
