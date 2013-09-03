@@ -141,82 +141,6 @@ def check_arguments(args):
 		errors.append( colorama.Style.BRIGHT + "source directory" +  colorama.Style.NORMAL + " is not a valid directory");
 	return (len(errors) == 0, errors)
 
-def check_matroska_video(file_name, verbose=False):
-	"""
-		Checks if the file has a video track
-		:param file_name: file to check
-		:type fille_name: string
-		:returns: boolean -- True if the file has a video track, False otherwise. 
-	"""
-	found = False
-	command = '{mkvmerge} -i "{input_file}"'.format(mkvmerge=which('mkvmerge')[0], input_file=file_name)
-	if verbose:
-		print command
-	thread = pexpect.spawn(command)
-	pl = thread.compile_pattern_list([
-		pexpect.EOF,
-		".*video.*"
-		])
-	while True:
-		i = thread.expect_list(pl, timeout=None)
-		if i == 0: # EOF, Process exited
-			break
-		if i == 1: # Status
-			found = True	
-	thread.close()	 
-	return found
-
-def check_mp4_video(file_name, verbose=False):
-	"""
-		Checks if the file has a video track
-		:param file_name: file to check
-		:type fille_name: string
-		:returns: boolean -- True if the file has a video track, False otherwise. 
-	"""
-	found = False
-	command = '{mp4info} "{input_file}"'.format(mp4info=which('mp4info')[0], input_file=file_name)
-	if verbose:
-		print command
-	thread = pexpect.spawn(command)
-	pl = thread.compile_pattern_list([
-		pexpect.EOF,
-		".*video.*"
-		])
-	while True:
-		i = thread.expect_list(pl, timeout=None)
-		if i == 0: # EOF, Process exited
-			break
-		if i == 1: # Status
-			found = True	
-	thread.close()	 
-	return found
-
-def check_avi_video(file_name, verbose=False):
-	"""
-		Checks if the file has a video track
-		:param file_name: file to check
-		:type fille_name: string
-		:returns: boolean -- True if the file has a video track, False otherwise. 
-	"""
-	found = False
-	# copyed from midentify
-	command = '{mplayer} -noconfig all -cache-min 0 -vo null -ao null -frames 0 -identify "{input_file}" 2>/dev/null | grep ID_VIDEO_FORMAT'.format(mplayer=which('mplayer')[0], input_file=file_name)
-	if verbose:
-		print command
-	thread = pexpect.spawn(command)
-	pl = thread.compile_pattern_list([
-		pexpect.EOF,
-		".*ID_VIDEO_FORMAT.*"
-		])
-	while True:
-		i = thread.expect_list(pl, timeout=None)
-		if i == 0: # EOF, Process exited
-			break
-		if i == 1: # Status
-			found = True	
-	thread.close()	 
-	return found
-
 def find_candidates(directory):
 	"""
 		Find all video container file that have an srt associated for hardsubbing
@@ -235,7 +159,8 @@ def find_candidates(directory):
 	for f in candidates:
 		sub_file = os.path.splitext(f)[0] + ".srt"
 		if os.path.isfile(sub_file):
-			if globals()['check_'+candidates[f]+'_video'](f):
+			movie_type = __import__('hardsub.'+candidates[f], fromlist=["x"])
+			if movie_type.check_video(f):
 				final_candidates.append(f)
 	return final_candidates
 
@@ -269,176 +194,6 @@ def launch_process_with_progress_bar(command, progress_reg_exp, progress_bar_mes
 			pbar.update(progress)	
 	thread.close()
 
-def hardsub_matroska_video(file_name, output_dir, scale, verbose=False):
-	"""
-		Hardsub a matroska video reencoding it using a .srt file for Subititles
-		:param filename: Name of the file that had to be reencoded
-		:type filename: str 
-		:param output_dir: Directory where to place raw hardsubbed video
-		:type output_dir: str
-		:param scale: Subtitle font scale
-		:type a: int
-	"""
-	# Build MEncoder command
-	command = '{mencoder} -o "{output_file}" -nosound -noautosub -noskip -mc 0 -sub "{sub_file}" -subfont-text-scale "{subtitle_scale}" -ovc x264 -x264encopts crf=21:preset=slow:level_idc=31 "{input_file}"'.format(
-		mencoder = which("mencoder")[0],
-		output_file = "{}/{}.264".format(output_dir, os.path.splitext(os.path.basename(file_name))[0]),
-		sub_file = os.path.splitext(file_name)[0] + ".srt",
-		subtitle_scale = scale,
-		input_file = file_name
-	)
-	launch_process_with_progress_bar(command, '.*\((.*)%\).*', 'Video Encoding: ', verbose)
-
-def hardsub_mp4_video(file_name, output_dir, scale, verbose=False):
-	"""
-		Hardsub a MP4 video reencoding it using a .srt file for Subititles
-		:param filename: Name of the file that had to be reencoded
-		:type filename: str 
-		:param output_dir: Directory where to place raw hardsubbed video
-		:type output_dir: str
-		:param scale: Subtitle font scale
-		:type a: int
-	"""
-	# Build MEncoder command
-	command = '{mencoder} -o "{output_file}" -of rawvideo -nosound -noautosub -noskip -mc 0 -sub "{sub_file}" -subfont-text-scale "{subtitle_scale}" -ovc x264 -x264encopts crf=21:preset=slow:level_idc=31 "{input_file}"'.format(
-		mencoder = which("mencoder")[0],
-		output_file = "{}/{}.264".format(output_dir, os.path.splitext(os.path.basename(file_name))[0]),
-		sub_file = os.path.splitext(file_name)[0] + ".srt",
-		subtitle_scale = scale,
-		input_file = file_name
-	)
-	launch_process_with_progress_bar(command, '.*\((.*)%\).*', 'Video Encoding: ', verbose)
-
-def hardsub_avi_video(file_name, output_dir, scale, verbose=False):
-	"""
-		Hardsub a AVI video reencoding it using a .srt file for Subititles
-		:param filename: Name of the file that had to be reencoded
-		:type filename: str 
-		:param output_dir: Directory where to place raw hardsubbed video
-		:type output_dir: str
-		:param scale: Subtitle font scale
-		:type a: int
-	"""
-	# Build MEncoder command
-	command = '{mencoder} -o "{output_file}" -nosound -noautosub -noskip -mc 0 -sub "{sub_file}" -subfont-text-scale "{subtitle_scale}" -ovc xvid -xvidencopts fixed_quant=2 "{input_file}"'.format(
-		mencoder = which("mencoder")[0],
-		output_file = "{}/{}.xvid".format(output_dir, os.path.splitext(os.path.basename(file_name))[0]),
-		sub_file = os.path.splitext(file_name)[0] + ".srt",
-		subtitle_scale = scale,
-		input_file = file_name
-	)
-	launch_process_with_progress_bar(command, '.*\((.*)%\).*', 'Video Encoding: ', verbose)
-
-def extract_matroska_audio(file_name, output_dir, verbose=False):
-	"""
-		Extract all audio tracks from a matroska container
-		:param filename: Name of the file that contains audio track
-		:type filename: str 
-		:param output_dir: Directory where to place raw audio track
-		:type output_dir: str	
-	"""
-	# detect how many audio track
-	command = '{mkvmerge} -i "{input_file}"'.format(mkvmerge=which('mkvmerge')[0], input_file=file_name)
-	if verbose:
-		print command
-	thread = pexpect.spawn(command)
-	pl = thread.compile_pattern_list([
-		pexpect.EOF,
-		".*(\d+): audio.*"
-		])
-	audio_tracks = []
-	while True:
-		i = thread.expect_list(pl, timeout=None)
-		if i == 0: # EOF, Process exited
-			break
-		if i == 1: # Status
-			audio_tracks.append(int(thread.match.group(1)))	
-	thread.close()	 
-	# Now extract each audio track
-	for track in audio_tracks:
-		t_command = '{mkvextract} tracks "{input_file}" {track}:{dest_file}'.format(
-			mkvextract = which("mkvextract")[0],
-			input_file = file_name,
-			track = track,
-			dest_file = output_dir + os.sep + "{}".format(track) + ".audio"
-		)
-		launch_process_with_progress_bar(t_command, '.*(\d+)%.*', 'Extract audio track {}: '.format(track), verbose)
-		
-def extract_mp4_audio(file_name, output_dir, verbose=False):
-	"""
-		Extract all audio tracks from a MP4 container
-		:param filename: Name of the file that contains audio track
-		:type filename: str 
-		:param output_dir: Directory where to place raw audio track
-		:type output_dir: str	
-	"""
-	# detect how many audio tracks
-	command = '{mp4info} "{input_file}"'.format(mp4info=which('mp4info')[0], input_file=file_name)
-	if verbose:
-		print command
-	thread = pexpect.spawn(command)
-	pl = thread.compile_pattern_list([
-		pexpect.EOF,
-		"(\d+)\s+audio\s+(.*)"
-		])
-	audio_tracks = {}
-	while True:
-		i = thread.expect_list(pl, timeout=None)
-		if i == 0: # EOF, Process exited
-			break
-		if i == 1: # Status
-			# MP4Box gets the type of the audio track from the extension
-			# TODO(gquadro): handle types other than AAC
-			if 'AAC' in thread.match.group(2):
-				audio_tracks[int(thread.match.group(1))] = 'aac'
-			else:
-				audio_tracks[int(thread.match.group(1))] = 'audio'
-	thread.close()	 
-	# Now extract each audio track
-	for track in audio_tracks:
-		t_command = '{mp4box} -out "{dest_file}" -raw {track} "{input_file}"'.format(
-			mp4box = which("MP4Box")[0],
-			input_file = file_name,
-			track = track,
-			dest_file = output_dir + os.sep + "{}".format(track) + "." + audio_tracks[track]
-		)
-		launch_process_with_progress_bar(t_command, '.*(\d+)%.*', 'Extract audio track {}: '.format(track), verbose)
-
-def extract_avi_audio(file_name, output_dir, verbose=False):
-	"""
-		Extract all audio tracks from a AVI container
-		:param filename: Name of the file that contains audio track
-		:type filename: str 
-		:param output_dir: Directory where to place raw audio track
-		:type output_dir: str	
-	"""
-	# detect how many audio track
-	command = '{mplayer} -noconfig all -cache-min 0 -vo null -ao null -frames 0 -identify "{input_file}" 2>/dev/null | grep ID_AUDIO_ID'.format(mplayer=which('mplayer')[0], input_file=file_name)
-	if verbose:
-		print command
-	thread = pexpect.spawn(command)
-	pl = thread.compile_pattern_list([
-		pexpect.EOF,
-		"ID_AUDIO_ID=(\d+).*"
-		])
-	audio_tracks = []
-	while True:
-		i = thread.expect_list(pl, timeout=None)
-		if i == 0: # EOF, Process exited
-			break
-		if i == 1: # Status
-			audio_tracks.append(int(thread.match.group(1)))	
-	thread.close()	 
-	# Now extract each audio track
-	for track in audio_tracks:
-		t_command = '{mplayer} -aid {track} -dumpaudio -dumpfile {dest_file} "{input_file}"'.format(
-			mplayer = which("mplayer")[0],
-			input_file = file_name,
-			track = track,
-			dest_file = output_dir + os.sep + "{}".format(track) + ".audio"
-		)
-		launch_process_with_progress_bar(t_command, '.*(\d+)%.*', 'Extract audio track {}: '.format(track), verbose)
-
 def extract_audio(file_name, output_dir, verbose=False):
 	"""
 		Extract all audio tracks from a container
@@ -454,7 +209,8 @@ def extract_audio(file_name, output_dir, verbose=False):
 			kind = ALLOWED_MAGIC_SIG[ms]
 			break
 	if kind is not None:
-		globals()['extract_'+kind+'_audio'](file_name, output_dir, verbose)
+		movie_type = __import__('hardsub.'+kind, fromlist=["x"])
+		movie_type.extract_audio(file_name, output_dir, verbose)
 
 def hardsub_video(file_name, output_dir, scale, verbose=False):
 	"""
@@ -473,82 +229,8 @@ def hardsub_video(file_name, output_dir, scale, verbose=False):
 			kind = ALLOWED_MAGIC_SIG[ms]
 			break
 	if kind is not None:
-		globals()['hardsub_'+kind+'_video'](file_name, output_dir, scale, verbose)
-
-def build_matroska_final_file(file_name, output_dir, verbose=False):
-	"""
-		Rebuild the matroska container for source file with hardsubbed video track
-		:param filename: Name of the file that had to be reencoded
-		:type filename: str 
-		:param output_dir: Directory where to place raw hardsubbed video
-		:type output_dir: str
-	"""
-	list_of_files = [f for f in os.listdir(output_dir)  if re.match(r'.*\.(264|audio)', f)]
-	count = 0
-	file_param = []
-	for f in reversed(list_of_files):
-		file_param.append(output_dir + os.sep + f + " --compression {}:none".format(count))
-		count = count + 1
-	command = '{mkvmerge} -o "{dest_file}" {files_opt}'.format(mkvmerge=which('mkvmerge')[0], dest_file = output_dir + os.sep + os.path.basename(file_name), files_opt = " ".join(file_param))
-	launch_process_with_progress_bar(command, '.*(\d+)%.*', 'Rebuilding file: ', verbose)
-	# Cleaning some mess
-	for f in reversed(list_of_files):
-		os.remove(output_dir + os.sep + f) 
-
-def build_mp4_final_file(file_name, output_dir, verbose=False):
-	"""
-		Rebuild the MP4 container for source file with hardsubbed video track
-		:param filename: Name of the file that had to be reencoded
-		:type filename: str 
-		:param output_dir: Directory where to place raw hardsubbed video
-		:type output_dir: str
-	"""
-	list_of_files = [f for f in os.listdir(output_dir)  if re.match(r'.*\.(264|aac|audio)', f)]
-	file_param = []
-	for f in reversed(list_of_files):
-		file_param.append('-add ' + output_dir + os.sep + f)
-	command = '{MP4Box} -quiet {add_audio_opts} {dest_file}'.format(
-		MP4Box = which('MP4Box')[0],
-		add_audio_opts = ' '.join(file_param),
-		dest_file = output_dir + os.sep + os.path.basename(file_name)
-	)
-	launch_process_with_progress_bar(command, '.*(\d+)%.*', 'Rebuilding file: ', verbose)
-	# Cleaning some mess
-	for f in reversed(list_of_files):
-		os.remove(output_dir + os.sep + f) 
-
-def build_avi_final_file(file_name, output_dir, verbose=False):
-	"""
-		Rebuild the AVI container for source file with hardsubbed video track
-		:param filename: Name of the file that had to be reencoded
-		:type filename: str 
-		:param output_dir: Directory where to place raw hardsubbed video
-		:type output_dir: str
-	"""
-
-	#ffmpeg -i d/The\ Matrix\ Reloaded\ \(2003\)\ \ Telugu_\[Sample\].xvid -i d/1.audio -i d/2.audio -c copy -map 0:0 -map 1:0 -map 2:0 d/out.avi
-	list_of_files = [f for f in os.listdir(output_dir)  if re.match(r'.*\.(xvid|audio)', f)]
-	input_param = []
-	map_param = []
-	count = 0
-	for f in reversed(list_of_files):
-		if f[-5:] == '.xvid':
-			video_file = '-i "' + output_dir + os.sep + f + '"'
-		else:
-			count = count + 1
-			input_param.append('-i "' + output_dir + os.sep + f + '"')
-			map_param.append('-map ' + str(count) + ':0')
-	command = '{ffmpeg} {video_input} {input_params} -c copy -map 0:0 {map_params} "{dest_file}"'.format(
-		ffmpeg = which('ffmpeg')[0],
-                video_input = video_file,
-		input_params = ' '.join(input_param),
-		map_params = ' '.join(map_param),
-		dest_file = output_dir + os.sep + os.path.basename(file_name)
-	)
-	launch_process_with_progress_bar(command, '.*(\d+)%.*', 'Rebuilding file: ', verbose)
-	# Cleaning some mess
-	#for f in reversed(list_of_files):
-	#	os.remove(output_dir + os.sep + f) 
+		movie_type = __import__('hardsub.'+kind, fromlist=["x"])
+		movie_type.hardsub_video(file_name, output_dir, scale, verbose)
 
 def build_final_file(file_name, output_dir, verbose=False):
 	"""
@@ -565,7 +247,8 @@ def build_final_file(file_name, output_dir, verbose=False):
 			kind = ALLOWED_MAGIC_SIG[ms]
 			break
 	if kind is not None:
-		globals()['build_'+kind+'_final_file'](file_name, output_dir, verbose)
+		movie_type = __import__('hardsub.'+kind, fromlist=["x"])
+		movie_type.mux_audio_video(file_name, output_dir, verbose)
 
 def hardsub_main():
 	"""
