@@ -36,7 +36,8 @@ REQUIRED_EXECUTABLES = (
 	'mkvextract',
 	'mkvmerge',
 	'MP4Box',
-	'mp4info'
+	'mp4info',
+	'ffmpeg'
 )
 
 # List of magic signatures for video files
@@ -524,18 +525,24 @@ def build_avi_final_file(file_name, output_dir, verbose=False):
 		:param output_dir: Directory where to place raw hardsubbed video
 		:type output_dir: str
 	"""
+
+	#ffmpeg -i d/The\ Matrix\ Reloaded\ \(2003\)\ \ Telugu_\[Sample\].xvid -i d/1.audio -i d/2.audio -c copy -map 0:0 -map 1:0 -map 2:0 d/out.avi
 	list_of_files = [f for f in os.listdir(output_dir)  if re.match(r'.*\.(xvid|audio)', f)]
-	file_param = []
+	input_param = []
+	map_param = []
+	count = 0
 	for f in reversed(list_of_files):
 		if f[-5:] == '.xvid':
-			video_file = output_dir + os.sep + f
+			video_file = '-i "' + output_dir + os.sep + f + '"'
 		else:
-			file_param.append('-audiofile ' + output_dir + os.sep + f)
-	# TODO(gquadro): test with more than one audio track
-	command = '{mencoder} "{src_file}" -ovc copy -oac copy -mc 0 -noskip -noodml {add_audio_opts} -o "{dest_file}"'.format(
-		mencoder = which('mencoder')[0],
-                src_file = video_file,
-		add_audio_opts = ' '.join(file_param),
+			count = count + 1
+			input_param.append('-i "' + output_dir + os.sep + f + '"')
+			map_param.append('-map ' + str(count) + ':0')
+	command = '{ffmpeg} {video_input} {input_params} -c copy -map 0:0 {map_params} "{dest_file}"'.format(
+		ffmpeg = which('ffmpeg')[0],
+                video_input = video_file,
+		input_params = ' '.join(input_param),
+		map_params = ' '.join(map_param),
 		dest_file = output_dir + os.sep + os.path.basename(file_name)
 	)
 	launch_process_with_progress_bar(command, '.*(\d+)%.*', 'Rebuilding file: ', verbose)
