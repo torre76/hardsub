@@ -162,6 +162,7 @@ def find_candidates(directory):
 			movie_type = __import__('hardsub.'+candidates[f], fromlist=["x"])
 			if movie_type.check_video(f):
 				final_candidates.append(f)
+	final_candidates.sort()
 	return final_candidates
 
 def launch_process_with_progress_bar(command, progress_reg_exp, progress_bar_message="Working", verbose=False):
