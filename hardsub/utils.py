@@ -2,6 +2,7 @@
 
 import os
 
+import colorama
 import pexpect
 import progressbar
 
@@ -70,3 +71,6 @@ def launch_process_with_progress_bar(command, progress_reg_exp, progress_bar_mes
 			progress = int(thread.match.group(1))
 			pbar.update(progress)	
 	thread.close()
+        if thread.exitstatus != 0 :
+		print (colorama.Fore.RED + "Error in execution of command. " + colorama.Fore.RESET + "Try again with -v switch to see the executed command.")
+		quit()

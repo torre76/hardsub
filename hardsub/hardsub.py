@@ -264,7 +264,7 @@ def hardsub_main():
 	# Second, check for all executables that are required by this script
 	executables_found, missing_executables = check_prerequisites()
 	if not executables_found:
-		print ( colorama.Style.BRIGHT + "Some dependencies for this script are missing. "  + colorama.Style.NORMAL + "Please check that the following packages are installed on this Linux Box:")
+		print (colorama.Style.BRIGHT + "Some dependencies for this script are missing. "  + colorama.Style.NORMAL + "Please check that the following packages are installed on this Linux Box:")
 		for me in missing_executables:
 			print ("\t- "  + colorama.Style.BRIGHT + "{}".format(me)  + colorama.Style.NORMAL);
 		sys.exit(2)

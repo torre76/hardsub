@@ -103,8 +103,8 @@ def mux_audio_video(file_name, output_dir, verbose=False):
 	list_of_files = [f for f in os.listdir(output_dir)  if re.match(r'.*\.(264|aac|audio)', f)]
 	file_param = []
 	for f in reversed(list_of_files):
-		file_param.append('-add ' + output_dir + os.sep + f)
-	command = '{MP4Box} -quiet {add_audio_opts} {dest_file}'.format(
+		file_param.append('-add "' + output_dir + os.sep + f + '"')
+	command = '{MP4Box} -quiet {add_audio_opts} "{dest_file}"'.format(
 		MP4Box = which('MP4Box')[0],
 		add_audio_opts = ' '.join(file_param),
 		dest_file = output_dir + os.sep + os.path.basename(file_name)
