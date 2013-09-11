@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import time
 
 import colorama
 import pexpect
@@ -45,7 +46,7 @@ def which(name, flags=os.X_OK):
 	                result.append(pext)
 	    return result
 	   
-def launch_process_with_progress_bar(command, progress_reg_exp, progress_bar_message="Working", verbose=False):
+def launch_process_with_progress_bar(command, progress_reg_exp, progress_bar_message="Working", verbose=False, debug=False):
 	"""
 		Launch a process and show a progress bar with auto calculated ETA.
 		:param command: Command to launch
@@ -58,6 +59,10 @@ def launch_process_with_progress_bar(command, progress_reg_exp, progress_bar_mes
 	if verbose:
 		print command
 	thread = pexpect.spawn(command)
+	if debug:
+		fout = file('/tmp/hs.log', 'a')
+		fout.write(time.ctime() + ': ' + command)
+		thread.logfile = fout
 	pl = thread.compile_pattern_list([
 		pexpect.EOF,
 		progress_reg_exp

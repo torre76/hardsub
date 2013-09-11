@@ -125,6 +125,7 @@ def build_argument_parser():
 	ap.add_argument("-o", "--output", required=True, help="States the output directory for hardsubbed video.", metavar="<output_dir>")
 	ap.add_argument("-s", "--subtitle-scale", default=2.5, help="Set the font scale (between 1 and 100)", metavar="<subtitle_scale>")
 	ap.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
+	ap.add_argument("--debug", help="save stdout and stderr on /tmp/hs.log", action="store_true")
 	return ap
 
 def check_arguments(args):
@@ -195,7 +196,7 @@ def launch_process_with_progress_bar(command, progress_reg_exp, progress_bar_mes
 			pbar.update(progress)	
 	thread.close()
 
-def extract_audio(file_name, output_dir, verbose=False):
+def extract_audio(file_name, output_dir, verbose=False, debug=False):
 	"""
 		Extract all audio tracks from a container
 		:param filename: Name of the file that contains audio track
@@ -211,9 +212,9 @@ def extract_audio(file_name, output_dir, verbose=False):
 			break
 	if kind is not None:
 		movie_type = __import__('hardsub.'+kind, fromlist=["x"])
-		movie_type.extract_audio(file_name, output_dir, verbose)
+		movie_type.extract_audio(file_name, output_dir, verbose, debug)
 
-def hardsub_video(file_name, output_dir, scale, verbose=False):
+def hardsub_video(file_name, output_dir, scale, verbose=False, debug=False):
 	"""
 		Hardsub a video reencoding it using a .srt file for Subititles
 		:param filename: Name of the file that had to be reencoded
@@ -231,9 +232,9 @@ def hardsub_video(file_name, output_dir, scale, verbose=False):
 			break
 	if kind is not None:
 		movie_type = __import__('hardsub.'+kind, fromlist=["x"])
-		movie_type.hardsub_video(file_name, output_dir, scale, verbose)
+		movie_type.hardsub_video(file_name, output_dir, scale, verbose, debug)
 
-def build_final_file(file_name, output_dir, verbose=False):
+def build_final_file(file_name, output_dir, verbose=False, debug=False):
 	"""
 		Rebuild the container for source file with hardsubbed video track
 		:param filename: Name of the file that had to be reencoded
@@ -249,7 +250,7 @@ def build_final_file(file_name, output_dir, verbose=False):
 			break
 	if kind is not None:
 		movie_type = __import__('hardsub.'+kind, fromlist=["x"])
-		movie_type.mux_audio_video(file_name, output_dir, verbose)
+		movie_type.mux_audio_video(file_name, output_dir, verbose, debug)
 
 def hardsub_main():
 	"""
@@ -289,7 +290,7 @@ def hardsub_main():
 	for f in files_to_hardsub:
 		print ("\nStart work on " + colorama.Fore.GREEN + colorama.Style.BRIGHT + "{}".format(os.path.basename(f)) + colorama.Style.NORMAL + colorama.Fore.RESET + " ("  + colorama.Style.BRIGHT + "{}/{}".format(current_file, len(files_to_hardsub)) + colorama.Style.NORMAL + ").")
 		print ("")
-		hardsub_video(f, arguments.output, arguments.subtitle_scale, arguments.verbose)
-		extract_audio(f, arguments.output, arguments.verbose)
-		build_final_file(f, arguments.output, arguments.verbose)
+		hardsub_video(f, arguments.output, arguments.subtitle_scale, arguments.verbose, arguments.debug)
+		extract_audio(f, arguments.output, arguments.verbose, arguments.debug)
+		build_final_file(f, arguments.output, arguments.verbose, arguments.debug)
 		current_file = current_file + 1

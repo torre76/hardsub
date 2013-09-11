@@ -33,7 +33,7 @@ def check_video(file_name, verbose=False):
 	thread.close()	 
 	return found
 
-def hardsub_video(file_name, output_dir, scale, verbose=False):
+def hardsub_video(file_name, output_dir, scale, verbose=False, debug=False):
 	"""
 		Hardsub a AVI video reencoding it using a .srt file for Subititles
 		:param filename: Name of the file that had to be reencoded
@@ -51,9 +51,9 @@ def hardsub_video(file_name, output_dir, scale, verbose=False):
 		subtitle_scale=scale,
 		input_file=file_name
 	)
-	launch_process_with_progress_bar(command, '.*\((.*)%\).*', 'Video Encoding: ', verbose)
+	launch_process_with_progress_bar(command, '.*\((.*)%\).*', 'Video Encoding: ', verbose, debug)
 
-def extract_audio(file_name, output_dir, verbose=False):
+def extract_audio(file_name, output_dir, verbose=False, debug=False):
 	"""
 		Extract all audio tracks from a AVI container
 		:param filename: Name of the file that contains audio track
@@ -86,9 +86,9 @@ def extract_audio(file_name, output_dir, verbose=False):
 			track=track,
 			dest_file=output_dir + os.sep + "{}".format(track) + ".audio"
 		)
-		launch_process_with_progress_bar(t_command, '.*(\d+)%.*', 'Extract audio track {}: '.format(track), verbose)
+		launch_process_with_progress_bar(t_command, '.*(\d+)%.*', 'Extract audio track {}: '.format(track), verbose, debug)
 
-def mux_audio_video(file_name, output_dir, verbose=False):
+def mux_audio_video(file_name, output_dir, verbose=False, debug=False):
 	"""
 		Rebuild the AVI container for source file with hardsubbed video track
 		:param filename: Name of the file that had to be reencoded
@@ -114,7 +114,7 @@ def mux_audio_video(file_name, output_dir, verbose=False):
 		map_params=' '.join(map_param),
 		dest_file=output_dir + os.sep + os.path.basename(file_name)
 	)
-	launch_process_with_progress_bar(command, '.*(\d+)%.*', 'Rebuilding file: ', verbose)
+	launch_process_with_progress_bar(command, '.*(\d+)%.*', 'Rebuilding file: ', verbose, debug)
 	# Cleaning some mess
 	for f in reversed(list_of_files):
 		os.remove(output_dir + os.sep + f) 
