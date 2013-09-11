@@ -61,7 +61,7 @@ def launch_process_with_progress_bar(command, progress_reg_exp, progress_bar_mes
 	thread = pexpect.spawn(command)
 	if debug:
 		fout = file('/tmp/hs.log', 'a')
-		fout.write(time.ctime() + ': ' + command)
+		fout.write(time.ctime() + ': ' + command + "\n")
 		thread.logfile = fout
 	pl = thread.compile_pattern_list([
 		pexpect.EOF,
