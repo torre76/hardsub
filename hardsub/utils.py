@@ -6,6 +6,9 @@ import colorama
 import pexpect
 import progressbar
 
+def get_base_file_name(file_name):
+	return os.path.splitext(os.path.basename(file_name))[0]
+
 def which(name, flags=os.X_OK):
 	    """Search PATH for executable files with the given name.
 	   
