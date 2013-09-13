@@ -46,13 +46,15 @@ def which(name, flags=os.X_OK):
 	                result.append(pext)
 	    return result
 	   
-def launch_process_with_progress_bar(command, progress_reg_exp, progress_bar_message="Working", verbose=False, debug=False):
+def launch_process_with_progress_bar(command, progress_reg_exp, progress_scale=100, progress_bar_message="Working", verbose=False, debug=False):
 	"""
 		Launch a process and show a progress bar with auto calculated ETA.
 		:param command: Command to launch
 		:type command: str
 		:param progress_reg_exp: Regular Expression used to get process update percentage. It is applied on standard output
 		:type progress_reg_exp: str
+		:param progress_scale: Maximum value reached by the number captured in the regexp
+		:type progress_scale: integer 
 		:param progress_bar_message: Message shown on progress bar
 		:type progress_bar_message: str
 	"""
@@ -76,7 +78,7 @@ def launch_process_with_progress_bar(command, progress_reg_exp, progress_bar_mes
 			pbar.finish()
 			break
 		if i == 1:  # Status
-			progress = int(thread.match.group(1))
+			progress = 100 * int(thread.match.group(1)) / progress_scale
 			pbar.update(progress)	
 	thread.close()
         if thread.exitstatus != 0 :

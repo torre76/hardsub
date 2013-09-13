@@ -51,7 +51,7 @@ def hardsub_video(file_name, output_dir, scale, verbose=False, debug=False):
 		subtitle_scale=scale,
 		input_file=file_name
 	)
-	launch_process_with_progress_bar(command, '.*\((.*)%\).*', 'Video Encoding: ', verbose, debug)
+	launch_process_with_progress_bar(command, '.*\((.*)%\).*', 100, 'Video Encoding: ', verbose, debug)
 
 def extract_audio(file_name, output_dir, verbose=False, debug=False):
 	"""
@@ -86,7 +86,7 @@ def extract_audio(file_name, output_dir, verbose=False, debug=False):
 			track=track,
 			dest_file=output_dir + os.sep + "{}".format(track) + ".audio"
 		)
-		launch_process_with_progress_bar(t_command, '.*(\d+)%.*', 'Extract audio track {}: '.format(track), verbose, debug)
+		launch_process_with_progress_bar(t_command, '.*(\d+)%.*', 100, 'Extract audio track {}: '.format(track), verbose, debug)
 
 def mux_audio_video(file_name, output_dir, verbose=False, debug=False):
 	"""
@@ -107,6 +107,26 @@ def mux_audio_video(file_name, output_dir, verbose=False, debug=False):
 			count = count + 1
 			input_param.append('-i "' + output_dir + os.sep + f + '"')
 			map_param.append('-map ' + str(count) + ':0')
+
+	# Gather data for the progress bar.
+	# If you have ffmpeg you have ffprobe, so it is not checked in REQUIRED_EXECUTABLES
+	command = '{ffprobe} -show_streams {video_input}'.format(
+		ffprobe=which('ffprobe')[0],
+                video_input=video_file,
+	)
+	thread = pexpect.spawn(command)
+	pl = thread.compile_pattern_list([
+		pexpect.EOF,
+		"nb_frames=(\d+).*"
+		])
+	while True:
+		i = thread.expect_list(pl, timeout=None)
+		if i == 0:  # EOF, Process exited
+			break
+		if i == 1:  # Status
+			tot_frames = int(thread.match.group(1))
+	thread.close()	 
+
 	command = '{ffmpeg} -y {video_input} {input_params} -c copy -map 0:0 {map_params} "{dest_file}"'.format(
 		ffmpeg=which('ffmpeg')[0],
                 video_input=video_file,
@@ -114,7 +134,7 @@ def mux_audio_video(file_name, output_dir, verbose=False, debug=False):
 		map_params=' '.join(map_param),
 		dest_file=output_dir + os.sep + os.path.basename(file_name)
 	)
-	launch_process_with_progress_bar(command, '.*(\d+)%.*', 'Rebuilding file: ', verbose, debug)
+	launch_process_with_progress_bar(command, '.*frame=(\d+).*', tot_frames, 'Rebuilding file: ', verbose, debug)
 	# Cleaning some mess
-	for f in reversed(list_of_files):
-		os.remove(output_dir + os.sep + f) 
+	#for f in reversed(list_of_files):
+	#	os.remove(output_dir + os.sep + f) 

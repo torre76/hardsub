@@ -52,7 +52,7 @@ def hardsub_video(file_name, output_dir, scale, verbose=False, debug=False):
 		subtitle_scale = scale,
 		input_file = file_name
 	)
-	launch_process_with_progress_bar(command, '.*\((.*)%\).*', 'Video Encoding: ', verbose, debug)
+	launch_process_with_progress_bar(command, '.*\((.*)%\).*', 100, 'Video Encoding: ', verbose, debug)
 
 def extract_audio(file_name, output_dir, verbose=False, debug=False):
 	"""
@@ -97,7 +97,7 @@ def extract_audio(file_name, output_dir, verbose=False, debug=False):
 			track = track,
 			dest_file = output_file
 		)
-		launch_process_with_progress_bar(t_command, '.*(\d+)%.*', 'Extract audio track {}: '.format(track), verbose, debug)
+		launch_process_with_progress_bar(t_command, '.*\((\d+)/100\).*', 100, 'Extract audio track {}: '.format(track), verbose, debug)
 
 def mux_audio_video(file_name, output_dir, verbose=False, debug=False):
 	"""
@@ -108,7 +108,6 @@ def mux_audio_video(file_name, output_dir, verbose=False, debug=False):
 		:type output_dir: str
 	"""
         base_file_name = get_base_file_name(file_name)
-	#list_of_files = [f for f in os.listdir(output_dir) if re.match(r'.*\.(264|aac|audio)', f)]
 	list_of_files = [f for f in os.listdir(output_dir) if re.match(base_file_name + r'.*\.(264|aac|audio)', f)]
 	file_param = []
 	for f in reversed(list_of_files):
@@ -122,12 +121,12 @@ def mux_audio_video(file_name, output_dir, verbose=False, debug=False):
 		index_out = index_out + 1
 		output_file = output_dir + os.sep + os.path.basename(file_name) + '_' + str(index_out)
 
-	command = '{MP4Box} -quiet {add_audio_opts} "{dest_file}"'.format(
+	command = '{MP4Box} {add_audio_opts} "{dest_file}"'.format(
 		MP4Box = which('MP4Box')[0],
 		add_audio_opts = ' '.join(file_param),
 		dest_file = output_file
 	)
-	launch_process_with_progress_bar(command, '.*(\d+)%.*', 'Rebuilding file: ', verbose, debug)
+	launch_process_with_progress_bar(command, '.*\((\d+)/100\).*', 100, 'Rebuilding file: ', verbose, debug)
 	# Cleaning some mess
 	for f in reversed(list_of_files):
 		os.remove(output_dir + os.sep + f) 
