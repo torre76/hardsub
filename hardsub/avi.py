@@ -136,5 +136,5 @@ def mux_audio_video(file_name, output_dir, verbose=False, debug=False):
 	)
 	launch_process_with_progress_bar(command, '.*frame=(\d+).*', tot_frames, 'Rebuilding file: ', verbose, debug)
 	# Cleaning some mess
-	#for f in reversed(list_of_files):
-	#	os.remove(output_dir + os.sep + f) 
+	for f in reversed(list_of_files):
+		os.remove(output_dir + os.sep + f) 
