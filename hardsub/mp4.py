@@ -8,6 +8,14 @@ import pexpect
 
 from utils import which, launch_process_with_progress_bar, get_base_file_name
 
+# List of required executables on a Linux Box used to accomplish
+# hard subbing
+REQUIRED_EXECUTABLES = {
+	'mencoder' : '.*\((.*)%\).*',
+	'MP4Box'   : '.*\((\d+)/100\).*',
+	'mp4info'  : None,
+}
+
 def check_video(file_name, verbose=False):
 	"""
 		Checks if the file has a video track
@@ -52,7 +60,7 @@ def hardsub_video(file_name, output_dir, scale, verbose=False, debug=False):
 		subtitle_scale = scale,
 		input_file = file_name
 	)
-	launch_process_with_progress_bar(command, '.*\((.*)%\).*', 100, 'Video Encoding: ', verbose, debug)
+	launch_process_with_progress_bar(command, REQUIRED_EXECUTABLES['mencoder'], 100, 'Video Encoding: ', verbose, debug)
 
 def extract_audio(file_name, output_dir, verbose=False, debug=False):
 	"""
@@ -91,13 +99,13 @@ def extract_audio(file_name, output_dir, verbose=False, debug=False):
 		output_file = output_dir + os.sep + base_file_name + '_' + "{}".format(track) + "." + audio_tracks[track]
 		if os.path.isfile(output_file):
 			os.remove(output_file)
-		t_command = '{mp4box} -out "{dest_file}" -raw {track} "{input_file}"'.format(
-			mp4box = which("MP4Box")[0],
+		t_command = '{MP4Box} -out "{dest_file}" -raw {track} "{input_file}"'.format(
+			MP4Box = which("MP4Box")[0],
 			input_file = file_name,
 			track = track,
 			dest_file = output_file
 		)
-		launch_process_with_progress_bar(t_command, '.*\((\d+)/100\).*', 100, 'Extract audio track {}: '.format(track), verbose, debug)
+		launch_process_with_progress_bar(t_command, REQUIRED_EXECUTABLES['MP4Box'], 100, 'Extract audio track {}: '.format(track), verbose, debug)
 
 def mux_audio_video(file_name, output_dir, verbose=False, debug=False):
 	"""
@@ -126,7 +134,7 @@ def mux_audio_video(file_name, output_dir, verbose=False, debug=False):
 		add_audio_opts = ' '.join(file_param),
 		dest_file = output_file
 	)
-	launch_process_with_progress_bar(command, '.*\((\d+)/100\).*', 100, 'Rebuilding file: ', verbose, debug)
+	launch_process_with_progress_bar(command, REQUIRED_EXECUTABLES['MP4Box'], 100, 'Rebuilding file: ', verbose, debug)
 	# Cleaning some mess
 	for f in reversed(list_of_files):
 		os.remove(output_dir + os.sep + f) 

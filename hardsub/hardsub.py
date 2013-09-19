@@ -15,8 +15,8 @@ import sys
 
 import colorama
 import magic
-import pexpect
-import progressbar
+
+from utils import which
 
 __author__ = "Gian Luca Dalla Torre, Luigi Bellagotti"
 __copyright__ = "Copyright 2013, Gian Luca Dalla Torre and Luigi Bellagotti"
@@ -27,19 +27,6 @@ __maintainer__ = "Gian Luca Dalla Torre"
 __email__ = "gianluca.dallatorre@gmail.com"
 __status__ = "Alpha"
 
-# List of required executables on a Linux Box used to accomplish
-# hard subbing
-REQUIRED_EXECUTABLES = (
-	'file',
-	'mencoder',
-	'mplayer',
-	'mkvextract',
-	'mkvmerge',
-	'MP4Box',
-	'mp4info',
-	'ffmpeg'
-)
-
 # List of magic signatures for video files
 ALLOWED_MAGIC_SIG = {
 	'AVI': 'avi',
@@ -48,42 +35,6 @@ ALLOWED_MAGIC_SIG = {
 	#'ISO Media, MPEG v4 system, version 2': 'mp4',
 	'Matroska': 'matroska' 
 }
-
-def which(name, flags=os.X_OK):
-	    """Search PATH for executable files with the given name.
-	   
-	    On newer versions of MS-Windows, the PATHEXT environment variable will be
-	    set to the list of file extensions for files considered executable. This
-	    will normally include things like ".EXE". This fuction will also find files
-	    with the given name ending with any of these extensions.
-	
-	    On MS-Windows the only flag that has any meaning is os.F_OK. Any other
-	    flags will be ignored.
-	   
-	    @type name: C{str}
-	    @param name: The name for which to search.
-	   
-	    @type flags: C{int}
-	    @param flags: Arguments to L{os.access}.
-	   
-	    @rtype: C{list}
-	    @param: A list of the full paths to files found, in the
-	    order in which they were found.
-	    """
-	    result = []
-	    exts = filter(None, os.environ.get('PATHEXT', '').split(os.pathsep))
-	    path = os.environ.get('PATH', None)
-	    if path is None:
-	        return []
-	    for p in os.environ.get('PATH', '').split(os.pathsep):
-	        p = os.path.join(p, name)
-	        if os.access(p, flags):
-	            result.append(p)
-	        for e in exts:
-	            pext = p + e
-	            if os.access(pext, flags):
-	                result.append(pext)
-	    return result
 
 def header():
 	"""
@@ -100,16 +51,24 @@ def check_platform():
 	"""
 	return platform.system() == "Linux"
 
-def check_prerequisites():
+def check_prerequisites(file_name):
 	"""
 		Check if all executables required by this script
 		are present on the Linux Box.
 		:returns: (Boolean, tuple) -- True if all required executables are present, False otherwhise. Second tuple value contains all missing executables
 	"""
 	missing_executables = []
-	for executable in REQUIRED_EXECUTABLES:
-		if len(which(executable)) == 0:
-			missing_executables.append(executable)
+	magic_sig = magic.from_file(file_name)
+	kind = None
+	for ms in ALLOWED_MAGIC_SIG:
+		if ms in magic_sig:  
+			kind = ALLOWED_MAGIC_SIG[ms]
+			break
+	if kind is not None:
+		movie_type = __import__('hardsub.'+kind, fromlist=["x"])
+		for executable in movie_type.REQUIRED_EXECUTABLES:
+			if len(which(executable)) == 0:
+				missing_executables.append(executable)
 	return (len(missing_executables) == 0, tuple(missing_executables))
 
 def build_argument_parser():
@@ -165,36 +124,6 @@ def find_candidates(directory):
 				final_candidates.append(f)
 	final_candidates.sort()
 	return final_candidates
-
-def launch_process_with_progress_bar(command, progress_reg_exp, progress_bar_message="Working", verbose=False):
-	"""
-		Launch a process and show a progress bar with auto calculated ETA.
-		:param command: Command to launch
-		:type command: str
-		:param progress_reg_exp: Regular Expression used to get process update percentage. It is applied on standard output
-		:type progress_reg_exp: str
-		:param progress_bar_message: Message shown on progress bar
-		:type progress_bar_message: str
-	"""
-	if verbose:
-		print command
-	thread = pexpect.spawn(command)
-	pl = thread.compile_pattern_list([
-		pexpect.EOF,
-		progress_reg_exp
-		])
-	widgets = [progress_bar_message, progressbar.Percentage(), ' ', progressbar.Bar(fill="-"),
-               ' ', progressbar.AdaptiveETA(), ' ']
-	pbar = progressbar.ProgressBar(widgets=widgets, maxval=100).start()
-	while True:
-		i = thread.expect_list(pl, timeout=None)
-		if i == 0: # EOF, Process exited
-			pbar.finish()
-			break
-		if i == 1: # Status
-			progress = int(thread.match.group(1))
-			pbar.update(progress)	
-	thread.close()
 
 def extract_audio(file_name, output_dir, verbose=False, debug=False):
 	"""
@@ -262,13 +191,6 @@ def hardsub_main():
 	if not check_platform():
 		print ("Sorry but, for now, only" + colorama.Style.BRIGHT + " Linux " + colorama.Style.NORMAL + "platform is supported.")
 		sys.exit(1)
-	# Second, check for all executables that are required by this script
-	executables_found, missing_executables = check_prerequisites()
-	if not executables_found:
-		print (colorama.Style.BRIGHT + "Some dependencies for this script are missing. "  + colorama.Style.NORMAL + "Please check that the following packages are installed on this Linux Box:")
-		for me in missing_executables:
-			print ("\t- "  + colorama.Style.BRIGHT + "{}".format(me)  + colorama.Style.NORMAL);
-		sys.exit(2)
 	# Check for script parameters
 	ap = build_argument_parser()
 	arguments = ap.parse_args(sys.argv[1:])
@@ -288,8 +210,17 @@ def hardsub_main():
 		print ("\t- "  + colorama.Fore.GREEN + colorama.Style.BRIGHT + "{}".format(os.path.basename(f)) + colorama.Style.NORMAL + colorama.Fore.RESET)
 	current_file = 1
 	for f in files_to_hardsub:
-		print ("\nStart work on " + colorama.Fore.GREEN + colorama.Style.BRIGHT + "{}".format(os.path.basename(f)) + colorama.Style.NORMAL + colorama.Fore.RESET + " ("  + colorama.Style.BRIGHT + "{}/{}".format(current_file, len(files_to_hardsub)) + colorama.Style.NORMAL + ").")
+		print ("\nStart work on " + colorama.Fore.GREEN + colorama.Style.BRIGHT + "{}".format(os.path.basename(f)) + colorama.Style.NORMAL + colorama.Fore.RESET + 
+			" ("  + colorama.Style.BRIGHT + "{}/{}".format(current_file, len(files_to_hardsub)) + colorama.Style.NORMAL + ").")
 		print ("")
+		# Check for all executables that are required by this script
+		executables_found, missing_executables = check_prerequisites(f)
+		if not executables_found:
+			print (colorama.Style.BRIGHT + "Some dependencies for this script are missing. "  + colorama.Style.NORMAL + 
+				"Please check that the following packages are installed on this Linux Box:")
+			for me in missing_executables:
+				print ("\t- "  + colorama.Style.BRIGHT + "{}".format(me)  + colorama.Style.NORMAL);
+			sys.exit(2)
 		hardsub_video(f, arguments.output, arguments.subtitle_scale, arguments.verbose, arguments.debug)
 		extract_audio(f, arguments.output, arguments.verbose, arguments.debug)
 		build_final_file(f, arguments.output, arguments.verbose, arguments.debug)

@@ -7,6 +7,14 @@ import pexpect
 
 from utils import which, launch_process_with_progress_bar
 
+# List of required executables on a Linux Box used to accomplish
+# hard subbing
+REQUIRED_EXECUTABLES = {
+	'mencoder' : '.*\((.*)%\).*',
+	'mplayer'  : '.*\((.*)%\).*',
+	'ffmpeg'   : '.*frame=(\d+).*'
+}
+
 def check_video(file_name, verbose=False):
 	"""
 		Checks if the file has a video track
@@ -51,7 +59,7 @@ def hardsub_video(file_name, output_dir, scale, verbose=False, debug=False):
 		subtitle_scale=scale,
 		input_file=file_name
 	)
-	launch_process_with_progress_bar(command, '.*\((.*)%\).*', 100, 'Video Encoding: ', verbose, debug)
+	launch_process_with_progress_bar(command, REQUIRED_EXECUTABLES['mencoder'], 100, 'Video Encoding: ', verbose, debug)
 
 def extract_audio(file_name, output_dir, verbose=False, debug=False):
 	"""
@@ -86,7 +94,7 @@ def extract_audio(file_name, output_dir, verbose=False, debug=False):
 			track=track,
 			dest_file=output_dir + os.sep + "{}".format(track) + ".audio"
 		)
-		launch_process_with_progress_bar(t_command, '.*(\d+)%.*', 100, 'Extract audio track {}: '.format(track), verbose, debug)
+		launch_process_with_progress_bar(t_command, REQUIRED_EXECUTABLES['mplayer'], 100, 'Extract audio track {}: '.format(track), verbose, debug)
 
 def mux_audio_video(file_name, output_dir, verbose=False, debug=False):
 	"""
@@ -134,7 +142,7 @@ def mux_audio_video(file_name, output_dir, verbose=False, debug=False):
 		map_params=' '.join(map_param),
 		dest_file=output_dir + os.sep + os.path.basename(file_name)
 	)
-	launch_process_with_progress_bar(command, '.*frame=(\d+).*', tot_frames, 'Rebuilding file: ', verbose, debug)
+	launch_process_with_progress_bar(command, REQUIRED_EXECUTABLES['ffmpeg'], tot_frames, 'Rebuilding file: ', verbose, debug)
 	# Cleaning some mess
 	for f in reversed(list_of_files):
 		os.remove(output_dir + os.sep + f) 
