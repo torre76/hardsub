@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <!--
+      <link rel="shortcut icon" href="ico/favicon.png">
+    -->
+
+    <title>HS - Hardsub video file on GNU/Linux</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="css/bootstrap.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="css/sticky-footer-navbar.css" rel="stylesheet">
+
+  </head>
+
+  <body data-spy="scroll" data-target=".navbar-collapse">
+
+    <!-- Wrap all page content here -->
+    <div id="wrap">
+
+      <!-- Fixed navbar -->
+      <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#home">HS - Hardsub video file on GNU/Linux</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="#home">What is it?</a></li>
+            <li><a href="#why">Why should I use it?</a></li>
+            <li><a href="#installation">Installation</a></li>
+            <li><a href="#usage">Usage</a></li>
+            <li><a href="#issues">Issues</a></li>
+          </ul>          
+          <ul class="nav navbar-nav navbar-right">
+            <li><button class="btn btn-success" onclick="window.open('https://github.com/torre76/hardsub','_blank');">Fork me on Github</button></li>
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </div>
+      <!-- Begin page content -->
+      <div class="container">
+        <section id="home">
+          <div class="page-header">
+            <h1>HS <small>Hardsub video file on GNU/Linux</small></h1>
+          </div>
+          <p>
+            HS is a <em>python</em> script that simplifies re-encoding a video with subtitles irreversibly merged into its frames.
+          </p>
+          <p>
+            It starts from a video source file and its <a href="http://en.wikipedia.org/wiki/.srt#SubRip_text_file_format" target="_blank">SubRip text file format</a> (at this moment only srt files are supported) and it will produce a new video file of the same type of the source but with subtitles merged into video track.
+          </p>
+        </section>
+        <section id="video-support">
+          <div class="page-header">
+            <h2>What video containers this script supports?</h2>
+          </div>
+          <p>
+            It supports <a href="http://en.wikipedia.org/wiki/Audio_Video_Interleave" target="_blank">AVI</a>, <a href="http://en.wikipedia.org/wiki/Matroska" target="_blank">Matroska</a> and <a href="http://en.wikipedia.org/wiki/MP4" target="_blank">MPEG-4</a> containers.
+          </p>
+        </section>
+        <section id="why">
+          <div class="page-header">
+            <h2>Why should I use this script?</h2>
+          </div>
+          <p>
+            This script is useful if you have an old video decoder which does not support external <em>srt</em> files or if you prefer that subtitles for your video have to be immutable.
+          </p>
+        </section>    
+        <section id="installation">
+          <div class="page-header">
+            <h2>Installation</h2>
+          </div>
+          <p>
+            <em>This page is intentionally left blank.<br />
+              <br />
+              At least until <a href="https://github.com/torre76/hardsub/issues/3" target="_blank">#3</a> will be resolved.</em>
+          </p>
+        </section>     
+        <section id="usage">
+          <div class="page-header">
+            <h2>Usage</h2>
+          </div>
+          <p>
+            Once installed, the command syntax is:
+            <br /><br />
+            <pre>hs -o &lt;output_dir&gt; source_dir</pre>  
+            <br />
+            where:
+            <ul>
+                <li><em>output_dir</em> is the directory where reencoded video will be placed</li>
+                <li><em>source_dir</em> is the directory where video file(s) and relatives subititle file(s) has been placed. <strong>Please note that the srt file and video file must have the same name otherwhise the script will not consider this video as a source file</strong>.</li>
+            </ul>
+          </p>
+          <div class="page-header">
+            <h3>Additional parameters</h3>
+          </div>
+          <p>
+            <em>HS</em> has also additional paramteres:
+            <ul>
+              <li><em>-h</em> that shows an inline help</li>
+              <li><em>-v</em> that displays the underliying command that will be used for reencoding</li>
+              <li><em>-s</em> that states the size of subtitle text (1 - normal, 4 - blinded, any value inside this range is accepted).</li>
+            </ul>         
+          </p>
+          <div class="page-header">
+            <h3>Examples</h3>
+          </div>
+          <p>
+            <pre>hs -o out/ in/</pre>
+            <br />
+            will encode any video file present <em>in</em> in folder that has an <em>srt</em> file with the same name of video file and will output the new files in <em>out</em> folder.
+            <br /><br />
+            <pre>hs -s 4 -o out/ in/</pre>
+            <br />
+            same as above but the subtitle text will be gigantic.
+          </p>
+        </section> 
+        <section id="issues">
+          <div class="page-header">
+            <h2>Issue Tracker</h2>
+          </div>
+          <p>
+            If something does not work as expected or you think you found a bug on <em>HS</em>, you should open an issue on <a href="https://github.com/torre76/hardsub/issues?state=open" target="_blank">GitHub</a>.
+            <br />
+            <br />
+            We regularly check this tracking system and we surely would give you some feedback on your enquiries but keep in mind that:
+            <ul>
+              <li>this is an open source project made in our spare time. We do not earn nothing by this project, so you have to wait some times to get an answer. <strong>Please do not bother us bouncing the issue!</strong></li>
+              <li>the issue tracker is the only way you have to use to contact us. If you spam us by e-mail or GitHub, you will surely be ignored!</li>
+            </ul>
+            <br />
+          </p>
+        </section>
+      </div>
+    </div>
+
+    <div id="footer">
+      <div class="container">
+        <!--
+        <p class="text-muted credit">HS has been developed by <a href="https://github.com/torre76" target="_blank">Gian Luca Dalla Torre</a> and <a href="https://github.com/gquadro">Luigi Bellagotti</a> - <a target="_blank" href="https://github.com/torre76/hardsub">Fork me on Github!</a></p>-->
+        <div class="row">
+          <div class="col-md-8 text-muted credit">
+              HS has been developed by <a href="https://github.com/torre76" target="_blank">Gian Luca Dalla Torre</a> and <a href="https://github.com/gquadro">Luigi Bellagotti</a>.
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="js/jquery-1.10.2.min.js"></script>
+    <script src="js/jquery-migrate-1.2.1.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+  </body>
+</html>
