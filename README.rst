@@ -11,7 +11,7 @@ What video containers this script supports?
 
 It supports `AVI <http://en.wikipedia.org/wiki/Audio_Video_Interleave>`_,  `Matroska <http://en.wikipedia.org/wiki/Matroska>`_ and `MPEG-4 <http://en.wikipedia.org/wiki/MP4>`_ containers.
 
-Why I should use this script?
+Why should I use this script?
 -----------------------------
 
 This script is useful if you have an old video decoder which does not support external *srt* files or if you prefer that subtitles for your video have to be immutable.
