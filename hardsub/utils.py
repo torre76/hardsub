@@ -46,7 +46,7 @@ def which(name, flags=os.X_OK):
 	                result.append(pext)
 	    return result
 	   
-def launch_process_with_progress_bar(command, progress_reg_exp, progress_scale=100, progress_bar_message="Working", verbose=False, debug=False):
+def launch_process_with_progress_bar(command, progress_reg_exp, progress_scale=100, progress_bar_message="Working", verbose=False, debug=False, accepted_exit_codes=(0,)):
 	"""
 		Launch a process and show a progress bar with auto calculated ETA.
 		:param command: Command to launch
@@ -81,6 +81,6 @@ def launch_process_with_progress_bar(command, progress_reg_exp, progress_scale=1
 			progress = 100 * int(thread.match.group(1)) / progress_scale
 			pbar.update(progress)	
 	thread.close()
-        if thread.exitstatus != 0 :
+        if thread.exitstatus not in accepted_exit_codes :
 		print (colorama.Fore.RED + "Error in execution of command. " + colorama.Fore.RESET + "Try again with -v switch to see the executed command.")
 		quit()
