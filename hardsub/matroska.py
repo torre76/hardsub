@@ -94,7 +94,7 @@ def extract_audio(file_name, output_dir, verbose=False, debug=False):
 	# Now extract each audio track
 	for track in audio_tracks:
 		output_file = output_dir + os.sep + base_file_name + '_' + "{}".format(track) + "." + audio_tracks[track]
-		t_command = '{mkvextract} tracks "{input_file}" {track}:{dest_file}'.format(
+		t_command = '{mkvextract} tracks "{input_file}" {track}:"{dest_file}"'.format(
 			mkvextract = which("mkvextract")[0],
 			input_file = file_name,
 			track = track,
