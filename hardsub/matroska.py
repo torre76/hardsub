@@ -11,8 +11,8 @@ from utils import which, launch_process_with_progress_bar, get_base_file_name
 # hard subbing
 REQUIRED_EXECUTABLES = {
 	'mencoder'   : '.*\((.*)%\).*',
-	'mkvextract' : '.*(\d+)%.*',
-	'mkvmerge'   : '.*(\d+)%.*',
+	'mkvextract' : '.*: (\d+)%.*',
+	'mkvmerge'   : '.*: (\d+)%.*',
 }
 
 def check_video(file_name, verbose=False):
