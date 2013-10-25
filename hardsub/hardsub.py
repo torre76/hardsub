@@ -84,6 +84,7 @@ def build_argument_parser():
 	ap.add_argument("-o", "--output", required=True, help="States the output directory for hardsubbed video.", metavar="<output_dir>")
 	ap.add_argument("-s", "--subtitle-scale", default=2.5, help="Set the font scale (between 1 and 100)", metavar="<subtitle_scale>")
 	ap.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
+	ap.add_argument("-f", "--force", help="write to output directory even if it is not empty", action="store_true")
 	ap.add_argument("--debug", help="save stdout and stderr on /tmp/hs.log", action="store_true")
 	return ap
 
@@ -200,6 +201,14 @@ def hardsub_main():
 		for pe in param_errors:
 			print ("\t- {}".format(pe) );
 		sys.exit(3)
+	# Check if dest dir is empty or force was specified
+	if os.listdir(arguments.output) == [] or arguments.force :
+		if os.listdir(arguments.output) != [] and arguments.verbose :
+			print "Output directory not empty. Proceeding because -f was specified"
+	else :
+		print (colorama.Style.BRIGHT + "The output directory is not empty." + colorama.Style.NORMAL + 
+			" If you still want to proceed use the " + colorama.Style.BRIGHT + "-f" + colorama.Style.NORMAL + " parameter")
+		sys.exit(5)
 	# Get Files to hardsub
 	files_to_hardsub = find_candidates(arguments.source_dir)
 	if len(files_to_hardsub) == 0:
