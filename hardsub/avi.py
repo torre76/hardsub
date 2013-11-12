@@ -124,12 +124,12 @@ def mux_audio_video(file_name, output_dir):
 	# If you have ffmpeg you have ffprobe, so it is not checked in REQUIRED_EXECUTABLES
 	command = '{ffprobe} -show_streams "{video_input}"'.format(
 		ffprobe=which('ffprobe')[0],
-                video_input=video_file,
+                video_input=output_dir + os.sep + f,
 	)
 	thread = pexpect.spawn(command)
 	pl = thread.compile_pattern_list([
 		pexpect.EOF,
-		"nb_frames=(\d+).*"
+		"nb_frames=(\d+)"
 		])
 	while True:
 		i = thread.expect_list(pl, timeout=None)
@@ -139,7 +139,7 @@ def mux_audio_video(file_name, output_dir):
 			tot_frames = int(thread.match.group(1))
 	thread.close()	 
 
-	command = '{ffmpeg} -y "{video_input}" {input_params} -c copy -map 0:0 {map_params} "{dest_file}"'.format(
+	command = '{ffmpeg} -y {video_input} {input_params} -c copy -map 0:0 {map_params} "{dest_file}"'.format(
 		ffmpeg=which('ffmpeg')[0],
                 video_input=video_file,
 		input_params=' '.join(input_param),
