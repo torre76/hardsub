@@ -15,7 +15,11 @@ REQUIRED_EXECUTABLES = {
 	'mkvmerge'   : '.*: (\d+)%.*',
 }
 
-def check_video(file_name, verbose=False):
+verbose = False
+
+debug = False
+
+def check_video(file_name):
 	"""
 		Checks if the file has a video track
 		:param file_name: file to check
@@ -40,7 +44,7 @@ def check_video(file_name, verbose=False):
 	thread.close()	 
 	return found
 
-def hardsub_video(file_name, output_dir, scale, verbose=False, debug=False):
+def hardsub_video(file_name, output_dir, scale):
 	"""
 		Hardsub a matroska video reencoding it using a .srt file for Subititles
 		:param filename: Name of the file that had to be reencoded
@@ -61,7 +65,7 @@ def hardsub_video(file_name, output_dir, scale, verbose=False, debug=False):
 	)
 	launch_process_with_progress_bar(command, REQUIRED_EXECUTABLES['mencoder'], 100, 'Video Encoding: ', verbose, debug)
 
-def extract_audio(file_name, output_dir, verbose=False, debug=False):
+def extract_audio(file_name, output_dir):
 	"""
 		Extract all audio tracks from a matroska container
 		:param filename: Name of the file that contains audio track
@@ -102,7 +106,7 @@ def extract_audio(file_name, output_dir, verbose=False, debug=False):
 		)
 		launch_process_with_progress_bar(t_command, REQUIRED_EXECUTABLES['mkvextract'], 100, 'Extract audio track {}: '.format(track), verbose, debug)
 		
-def mux_audio_video(file_name, output_dir, verbose=False, debug=False):
+def mux_audio_video(file_name, output_dir):
 	"""
 		Rebuild the matroska container for source file with hardsubbed video track
 		:param filename: Name of the file that had to be reencoded

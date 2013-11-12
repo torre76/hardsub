@@ -142,7 +142,9 @@ def extract_audio(file_name, output_dir, verbose=False, debug=False):
 			break
 	if kind is not None:
 		movie_type = __import__('hardsub.'+kind, fromlist=["x"])
-		movie_type.extract_audio(file_name, output_dir, verbose, debug)
+		movie_type.verbose = verbose
+		movie_type.debug = debug
+		movie_type.extract_audio(file_name, output_dir)
 
 def hardsub_video(file_name, output_dir, scale, verbose=False, debug=False):
 	"""
@@ -162,7 +164,9 @@ def hardsub_video(file_name, output_dir, scale, verbose=False, debug=False):
 			break
 	if kind is not None:
 		movie_type = __import__('hardsub.'+kind, fromlist=["x"])
-		movie_type.hardsub_video(file_name, output_dir, scale, verbose, debug)
+		movie_type.verbose = verbose
+		movie_type.debug = debug
+		movie_type.hardsub_video(file_name, output_dir, scale)
 
 def build_final_file(file_name, output_dir, verbose=False, debug=False):
 	"""
@@ -180,7 +184,9 @@ def build_final_file(file_name, output_dir, verbose=False, debug=False):
 			break
 	if kind is not None:
 		movie_type = __import__('hardsub.'+kind, fromlist=["x"])
-		movie_type.mux_audio_video(file_name, output_dir, verbose, debug)
+		movie_type.verbose = verbose
+		movie_type.debug = debug
+		movie_type.mux_audio_video(file_name, output_dir)
 
 def hardsub_main():
 	"""
